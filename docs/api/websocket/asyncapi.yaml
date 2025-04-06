@@ -1,0 +1,241 @@
+asyncapi: 2.6.0
+
+info:
+  title: Game WebSocket API
+  version: 1.0.0
+  description: API for real-time game interactions over WebSocket.
+
+servers:
+  game-server:
+    url: ws://localhost:8080
+    protocol: ws
+    description: WebSocket server for game interactions.
+
+channels:
+  /game/{matchId}:
+    parameters:
+      matchId:
+        description: Unique identifier of the match.
+        schema:
+          type: string
+          format: uuid
+          example: "6ef44066-8c3e-4d3e-b1a1-bb36c16098f2"
+    subscribe:
+      operationId: onGameState
+      summary: Subscribe to game state updates.
+      message:
+        oneOf:
+          - $ref: "#/components/messages/GameState"
+          - $ref: "#/components/messages/EndGameState"
+          - $ref: "#/components/messages/DrawOffer"
+    publish:
+      operationId: sendGameData
+      summary: Send game data to the server.
+      message:
+        oneOf:
+          - $ref: "#/components/messages/GameSync"
+          - $ref: "#/components/messages/GameData"
+          - $ref: "#/components/messages/GameControlResign"
+          - $ref: "#/components/messages/GameControlOfferDraw"
+
+  /queueing:
+    subscribe:
+      operationId: onMatchFound
+      summary: Subscribe to matchmaking notification.
+      message:
+        oneOf:
+          - $ref: "#/components/messages/MatchFound"
+
+components:
+  messages:
+    MatchFound:
+      name: MatchFound
+      payload:
+        type: object
+        properties:
+          matchId:
+            type: string
+            format: uuid
+            example: "a418b2c9-bccd-49b7-a646-536061113ddf"
+          player1:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+                example: "39aef4b8-60c1-70f0-eca9-e2e5cbdf5e99"
+              rating:
+                type: number
+                format: float
+                example: 1200.0
+              newRatings:
+                type: array
+                items:
+                  type: number
+                  format: float
+                example: [1270.1, 1205.3, 1120.4]
+          player2:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              rating:
+                type: number
+                format: float
+              newRatings:
+                type: array
+                items:
+                  type: number
+                  format: float
+          gameMode:
+            type: string
+            example: "10+0"
+          server:
+            type: string
+            format: ipv4
+            example: 13.211.190.175
+          createdAt:
+            type: string
+            format: date-time
+            example: "2025-02-20T04:25:37.975024301Z"
+
+    GameData:
+      name: GameData
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            example: "gameData"
+          data:
+            type: object
+            properties:
+              action:
+                type: string
+                example: "move"
+              move:
+                type: string
+                example: "h5f7"
+          created_at:
+            type: string
+            format: date-time
+            example: "2025-01-23T11:34:59.491904972+07:00"
+
+    GameControlResign:
+      name: GameControlResign
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            example: "gameData"
+          data:
+            type: object
+            properties:
+              action:
+                type: string
+                example: "resign"
+          created_at:
+            type: string
+            format: date-time
+            example: "2025-01-23T11:34:59.491904972+07:00"
+
+    GameControlOfferDraw:
+      name: GameControlOfferDraw
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            example: "gameData"
+          data:
+            type: object
+            properties:
+              action:
+                type: string
+                example: "offerDraw"
+          created_at:
+            type: string
+            format: date-time
+            example: "2025-01-23T11:34:59.491904972+07:00"
+
+    GameSync:
+      name: GameSync
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            example: "gameData"
+          data:
+            type: object
+            properties:
+              action:
+                type: string
+                example: "sync"
+          created_at:
+            type: string
+            format: date-time
+            example: "2025-01-23T11:34:59.491904972+07:00"
+
+    DrawOffer:
+      name: DrawOffer
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            example: "drawOffer"
+
+    EndGameState:
+      name: EndGameState
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            example: "gameState"
+          game:
+            type: object
+            properties:
+              outcome:
+                type: string
+                example: "1-0"
+              method:
+                type: string
+                example: "Checkmate"
+              fen:
+                type: string
+                example: "r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4"
+              clocks:
+                type: array
+                items:
+                  type: string
+                example: ["8m35.849808716s", "9m38.185241841s"]
+
+    GameState:
+      name: GameState
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            example: "gameState"
+          game:
+            type: object
+            properties:
+              outcome:
+                type: string
+                example: "*"
+              method:
+                type: string
+                example: "NoMethod"
+              fen:
+                type: string
+                example: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+              clocks:
+                type: array
+                items:
+                  type: string
+                example: ["9m50.872900787s", "10m0s"]

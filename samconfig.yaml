@@ -1,0 +1,38 @@
+# More information about the configuration file can be found here:
+# https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
+version: 0.1
+
+default:
+  global:
+    parameters:
+      stack_name: slchess
+  build:
+    parameters:
+      cached: true
+      parallel: true
+  deploy:
+    parameters:
+      capabilities:
+        - CAPABILITY_IAM
+        - CAPABILITY_AUTO_EXPAND
+      confirm_changeset: true
+      resolve_s3: true
+      s3_prefix: slchess
+      region: ap-southeast-2
+      image_repositories: []
+      disable_rollback: true
+      parameter_overrides: ServerImageUri=""
+  sync:
+    parameters:
+      watch: true
+  local_start_api:
+    parameters:
+      warm_containers: EAGER
+  local_start_lambda:
+parameters:
+warm_containers: EAGER
+
+prod:
+  sync:
+    parameters:
+      watch: false

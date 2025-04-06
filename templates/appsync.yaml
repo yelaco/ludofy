@@ -1,0 +1,189 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: AppSync Stack for Slchess
+
+Parameters:
+  StackName:
+    Type: String
+  DeploymentStage:
+    Type: String
+    Default: dev
+
+Resources:
+  AppSyncApi:
+    Type: AWS::Serverless::GraphQLApi
+    Properties:
+      Name: !Sub "${StackName}-${DeploymentStage}-api"
+      SchemaUri: ../internal/aws/appsync/schema.graphql
+      Auth:
+        Type: AMAZON_COGNITO_USER_POOLS
+        UserPool:
+          AwsRegion: !Ref AWS::Region
+          UserPoolId: !ImportValue UserPoolId
+          DefaultAction: ALLOW
+        Additional:
+          - Type: AWS_IAM
+
+  ### Data Sources ###
+  MatchStatesDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      Name: MatchStatesDataSource
+      Type: AMAZON_DYNAMODB
+      DynamoDBConfig:
+        TableName: !ImportValue MatchStatesTableName
+        AwsRegion: !Ref AWS::Region
+      ServiceRoleArn: !GetAtt AppSyncRole.Arn
+
+  MessagesDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      Name: MessagesDataSource
+      Type: AMAZON_DYNAMODB
+      DynamoDBConfig:
+        TableName: !ImportValue MessagesTableName
+        AwsRegion: !Ref AWS::Region
+      ServiceRoleArn: !GetAtt AppSyncRole.Arn
+
+  ### Resolvers ###
+  UpdateMatchStateResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      TypeName: Mutation
+      FieldName: updateMatchState
+      DataSourceName: !GetAtt MatchStatesDataSource.Name
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "PutItem",
+          "key": {
+            "Id": { "S": "$context.arguments.input.id" }
+          },
+          "attributeValues": {
+            "MatchId": { "S": "$context.arguments.input.matchId" },
+            "GameState": { "S": "$context.arguments.input.gameState" },
+            "PlayerStates": { "L": [
+              #foreach($playerState in $context.arguments.input.playerStates)
+                {
+                  "M": {
+                    "Clock": { "S": "$playerState.clock" },
+                    "Status": { "S": "$playerState.status" }
+                  }
+                }
+                #if($foreach.hasNext),#end
+              #end
+            ] },
+            "Move": { "M": {
+              "PlayerId": { "S": "$context.arguments.input.move.playerId" },
+              "Uci": { "S": "$context.arguments.input.move.uci" },
+            } },
+            "Ply": { "N" : "$context.arguments.input.ply" },
+            "Timestamp": { "S": "$context.arguments.input.timestamp" }
+          }
+        }
+      ResponseMappingTemplate: "$util.toJson($context.result)"
+
+  GetMatchStateResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      TypeName: Query
+      FieldName: getMatchState
+      DataSourceName: !GetAtt MatchStatesDataSource.Name
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "GetItem",
+          "key": {
+            "MatchId": { "S": "$context.arguments.matchId" }
+          }
+        }
+      ResponseMappingTemplate: "$util.toJson($context.result)"
+
+  SendMessageResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      TypeName: Mutation
+      FieldName: sendMessage
+      DataSourceName: !GetAtt MessagesDataSource.Name
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "PutItem",
+          "key": {
+            "Id": { "S": "$context.arguments.input.id" }
+          },
+          "attributeValues": {
+            "ConversationId": { "S": "$context.arguments.input.conversationId" },
+            "SenderId": { "S": "$context.arguments.input.senderId" },
+            "Content": { "S": "$context.arguments.input.content" },
+            "CreatedAt": { "S": "$util.time.nowISO8601()" }
+          }
+        }
+      ResponseMappingTemplate: "$util.toJson($context.result)"
+
+  ### IAM Roles ###
+  AppSyncRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AppSyncDynamoDBAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Scan
+                Resource:
+                  - !ImportValue MatchStatesTableArn
+                  - !ImportValue MessagesTableArn
+
+  AppSyncAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: AppSyncAccessRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: "*"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: AppSyncGraphQLPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: appsync:GraphQL
+                Resource: !Sub "${AppSyncApi.Arn}/*"
+
+Outputs:
+  AppSyncGraphQLApiUrl:
+    Value: !GetAtt AppSyncApi.GraphQLUrl
+    Export:
+      Name: AppSyncGraphQLApiUrl
+
+  AppSyncRealtimeApiUrl:
+    Value: !GetAtt AppSyncApi.RealtimeUrl
+    Export:
+      Name: AppSyncRealtimeApiUrl
+
+  AppSyncApiArn:
+    Value: !Ref AppSyncApi
+    Export:
+      Name: AppSyncApiArn

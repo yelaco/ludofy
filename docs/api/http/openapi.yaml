@@ -1,0 +1,328 @@
+openapi: 3.1.0
+
+info:
+  title: Slchess API
+  version: 1.0.0
+  description: API for interacting with Slchess Backend.
+
+servers:
+  - url: http://slchess.vn
+    description: Slchess Server
+
+paths:
+  /matchmaking:
+    post:
+      summary: Request matchmaking
+      description: Submit a matchmaking request with player rating and game mode.
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            example: "eyJraWQiOiI2WkZjQUx1d2RrK01LRGN0R1poM3pwM2NTSDkwbHlSYUVsXC9iVkFJRlZkUT0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIzOWFlZjRiOC02MGMxLTcwZjAtZWNhOS1lMmU1Y2JkZjVlOTkiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5hcC1zb3V0aGVhc3QtMi5hbWF6b25hd3MuY29tXC9hcC1zb3V0aGVhc3QtMl85eDlydkw3ekoiLCJjb2duaXRvOnVzZXJuYW1lIjoidGVzdHVzZXIxIiwib3JpZ2luX2p0aSI6IjVmMTk4MzQzLTYzOTEtNDAxYi1hYTI5LTY5Y2EwZTJmYzY0ZCIsImF1ZCI6IjVjbmcwdTlnNmZtM2MxanZrcTViaHF0MmxmIiwiZXZlbnRfaWQiOiJlNzU5N2Y3Ni1kYjYyLTQ4NGUtOWRhYS01Nzk4ZGFmNGE5YTIiLCJ0b2tlbl91c2UiOiJpZCIsImF1dGhfdGltZSI6MTc0MDAyNDY1NCwiZXhwIjoxNzQwMDI4MjU0LCJpYXQiOjE3NDAwMjQ2NTQsImp0aSI6ImM3N2EwM2MyLTY5MjItNDNjZC04NTQ4LWU4YzllNmM2YjRmOCIsImVtYWlsIjoidGVzdHVzZXIxQGdtYWlsLmNvbSJ9.Mhco3ZMEy672iYnmCql3sDH5zGDGMT0bF4hOedGrbAktEYtl9B3iPjfinx8aBY3NNGK2Gg5WopKfhw9GZpX1TcpEi_LV6aU0Thx_xYF28_Ou597X3l-Xe1wwviQf-JCxXzwfVPrms8zlkmXO621oQKvT1aVHvpwNmAOuoT-3dqHL_NZt5csLoo5K3Yuwiq5InqiFgwxJEv3Dt-9mTdjqq0DH1LbblNpXdnyjHANTK0u4HpGJ7oGUxuEYTh1p3JKU7fdkC3v31POBbYACUd4A6unmhPpSTAS6NOcKB0lNRuOvvko-m4X3E3er4XCP6Q1w2caCt5wnQnxPngYSm6TuUA"
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                minRating:
+                  type: integer
+                  example: 900
+                maxRating:
+                  type: integer
+                  example: 1250
+                gameMode:
+                  type: string
+                  example: "10+0"
+              required:
+                - minRating
+                - maxRating
+                - gameMode
+      responses:
+        "200":
+          description: Match found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveMatch"
+              example:
+                matchId: "a418b2c9-bccd-49b7-a646-536061113ddf"
+                player1:
+                  id: "39aef4b8-60c1-70f0-eca9-e2e5cbdf5e99"
+                  rating: 1200.0
+                  newRatings: [1270.1, 1205.3, 1120.4]
+                player2:
+                  id: "199e84a8-6031-70c7-efe5-89fdf66ba8a6"
+                  rating: 1200.2
+                  newRatings: [1270.1, 1205.2, 1120.3]
+                gameMode: "10min"
+                server: 13.211.190.175
+                createdAt: "2025-02-20T04:25:37.975024301Z"
+        "202":
+          description: Queued for matchmaking
+        "400":
+          description: Bad request
+        "500":
+          description: Internal server error
+
+  /match/{id}/restore:
+    post:
+      summary: Restore abandoned match by id
+      description: Restore abandoned match due to server termination
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            example: "eyJraWQiOiI2WkZjQUx1d2RrK01LRGN0R1poM3pwM2NTSDkwbHlSYUVsXC9iVkFJRlZkUT0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIzOWFlZjRiOC02MGMxLTcwZjAtZWNhOS1lMmU1Y2JkZjVlOTkiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5hcC1zb3V0aGVhc3QtMi5hbWF6b25hd3MuY29tXC9hcC1zb3V0aGVhc3QtMl85eDlydkw3ekoiLCJjb2duaXRvOnVzZXJuYW1lIjoidGVzdHVzZXIxIiwib3JpZ2luX2p0aSI6IjVmMTk4MzQzLTYzOTEtNDAxYi1hYTI5LTY5Y2EwZTJmYzY0ZCIsImF1ZCI6IjVjbmcwdTlnNmZtM2MxanZrcTViaHF0MmxmIiwiZXZlbnRfaWQiOiJlNzU5N2Y3Ni1kYjYyLTQ4NGUtOWRhYS01Nzk4ZGFmNGE5YTIiLCJ0b2tlbl91c2UiOiJpZCIsImF1dGhfdGltZSI6MTc0MDAyNDY1NCwiZXhwIjoxNzQwMDI4MjU0LCJpYXQiOjE3NDAwMjQ2NTQsImp0aSI6ImM3N2EwM2MyLTY5MjItNDNjZC04NTQ4LWU4YzllNmM2YjRmOCIsImVtYWlsIjoidGVzdHVzZXIxQGdtYWlsLmNvbSJ9.Mhco3ZMEy672iYnmCql3sDH5zGDGMT0bF4hOedGrbAktEYtl9B3iPjfinx8aBY3NNGK2Gg5WopKfhw9GZpX1TcpEi_LV6aU0Thx_xYF28_Ou597X3l-Xe1wwviQf-JCxXzwfVPrms8zlkmXO621oQKvT1aVHvpwNmAOuoT-3dqHL_NZt5csLoo5K3Yuwiq5InqiFgwxJEv3Dt-9mTdjqq0DH1LbblNpXdnyjHANTK0u4HpGJ7oGUxuEYTh1p3JKU7fdkC3v31POBbYACUd4A6unmhPpSTAS6NOcKB0lNRuOvvko-m4X3E3er4XCP6Q1w2caCt5wnQnxPngYSm6TuUA"
+          required: true
+      responses:
+        "200":
+          description: Match information after restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveMatch"
+              example:
+                matchId: "a418b2c9-bccd-49b7-a646-536061113ddf"
+                player1:
+                  id: "39aef4b8-60c1-70f0-eca9-e2e5cbdf5e99"
+                  rating: 1200.0
+                  newRatings: [1270.1, 1205.3, 1120.4]
+                player2:
+                  id: "199e84a8-6031-70c7-efe5-89fdf66ba8a6"
+                  rating: 1200.2
+                  newRatings: [1270.1, 1205.2, 1120.3]
+                gameMode: "10min"
+                server: 13.211.190.175
+                createdAt: "2025-02-20T04:25:37.975024301Z"
+        "400":
+          description: Bad request
+        "500":
+          description: Internal server error
+
+  /user/{id}:
+    get:
+      summary: Get user information by user id
+      description: Get user information by user id
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            example: "eyJraWQiOiI2WkZjQUx1d2RrK01LRGN0R1poM3pwM2NTSDkwbHlSYUVsXC9iVkFJRlZkUT0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIzOWFlZjRiOC02MGMxLTcwZjAtZWNhOS1lMmU1Y2JkZjVlOTkiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5hcC1zb3V0aGVhc3QtMi5hbWF6b25hd3MuY29tXC9hcC1zb3V0aGVhc3QtMl85eDlydkw3ekoiLCJjb2duaXRvOnVzZXJuYW1lIjoidGVzdHVzZXIxIiwib3JpZ2luX2p0aSI6IjVmMTk4MzQzLTYzOTEtNDAxYi1hYTI5LTY5Y2EwZTJmYzY0ZCIsImF1ZCI6IjVjbmcwdTlnNmZtM2MxanZrcTViaHF0MmxmIiwiZXZlbnRfaWQiOiJlNzU5N2Y3Ni1kYjYyLTQ4NGUtOWRhYS01Nzk4ZGFmNGE5YTIiLCJ0b2tlbl91c2UiOiJpZCIsImF1dGhfdGltZSI6MTc0MDAyNDY1NCwiZXhwIjoxNzQwMDI4MjU0LCJpYXQiOjE3NDAwMjQ2NTQsImp0aSI6ImM3N2EwM2MyLTY5MjItNDNjZC04NTQ4LWU4YzllNmM2YjRmOCIsImVtYWlsIjoidGVzdHVzZXIxQGdtYWlsLmNvbSJ9.Mhco3ZMEy672iYnmCql3sDH5zGDGMT0bF4hOedGrbAktEYtl9B3iPjfinx8aBY3NNGK2Gg5WopKfhw9GZpX1TcpEi_LV6aU0Thx_xYF28_Ou597X3l-Xe1wwviQf-JCxXzwfVPrms8zlkmXO621oQKvT1aVHvpwNmAOuoT-3dqHL_NZt5csLoo5K3Yuwiq5InqiFgwxJEv3Dt-9mTdjqq0DH1LbblNpXdnyjHANTK0u4HpGJ7oGUxuEYTh1p3JKU7fdkC3v31POBbYACUd4A6unmhPpSTAS6NOcKB0lNRuOvvko-m4X3E3er4XCP6Q1w2caCt5wnQnxPngYSm6TuUA"
+          required: true
+        - in: path
+          name: id
+          required: false
+          description: user id
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response with user information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+              examples:
+                Get own user information:
+                  value:
+                    id: "a418b2c9-bccd-49b7-a646-536061113ddf"
+                    username: "user1"
+                    locale: Vietnam
+                    picture: "s3://user/pictures/user1.jpg"
+                    phone: "0912345678"
+                    rating: 1264.234
+                    membership: "guest"
+                    createdAt: "2025-02-20T04:25:37.975024301Z"
+                Get another user's information:
+                  value:
+                    id: "a418b2c9-bccd-49b7-a646-536061113ddf"
+                    username: "user1"
+                    locale: Vietnam
+                    picture: "s3://user/pictures/user1.jpg"
+                    rating: 1264.234
+                    membership: "guest"
+                    createdAt: "2025-02-20T04:25:37.975024301Z"
+        "404":
+          description: User not found
+        "500":
+          description: Internal server error
+
+  /match/{id}:
+    get:
+      summary: Get match record by match id
+      description: Get match record by match id
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            example: "eyJraWQiOiI2WkZjQUx1d2RrK01LRGN0R1poM3pwM2NTSDkwbHlSYUVsXC9iVkFJRlZkUT0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIzOWFlZjRiOC02MGMxLTcwZjAtZWNhOS1lMmU1Y2JkZjVlOTkiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5hcC1zb3V0aGVhc3QtMi5hbWF6b25hd3MuY29tXC9hcC1zb3V0aGVhc3QtMl85eDlydkw3ekoiLCJjb2duaXRvOnVzZXJuYW1lIjoidGVzdHVzZXIxIiwib3JpZ2luX2p0aSI6IjVmMTk4MzQzLTYzOTEtNDAxYi1hYTI5LTY5Y2EwZTJmYzY0ZCIsImF1ZCI6IjVjbmcwdTlnNmZtM2MxanZrcTViaHF0MmxmIiwiZXZlbnRfaWQiOiJlNzU5N2Y3Ni1kYjYyLTQ4NGUtOWRhYS01Nzk4ZGFmNGE5YTIiLCJ0b2tlbl91c2UiOiJpZCIsImF1dGhfdGltZSI6MTc0MDAyNDY1NCwiZXhwIjoxNzQwMDI4MjU0LCJpYXQiOjE3NDAwMjQ2NTQsImp0aSI6ImM3N2EwM2MyLTY5MjItNDNjZC04NTQ4LWU4YzllNmM2YjRmOCIsImVtYWlsIjoidGVzdHVzZXIxQGdtYWlsLmNvbSJ9.Mhco3ZMEy672iYnmCql3sDH5zGDGMT0bF4hOedGrbAktEYtl9B3iPjfinx8aBY3NNGK2Gg5WopKfhw9GZpX1TcpEi_LV6aU0Thx_xYF28_Ou597X3l-Xe1wwviQf-JCxXzwfVPrms8zlkmXO621oQKvT1aVHvpwNmAOuoT-3dqHL_NZt5csLoo5K3Yuwiq5InqiFgwxJEv3Dt-9mTdjqq0DH1LbblNpXdnyjHANTK0u4HpGJ7oGUxuEYTh1p3JKU7fdkC3v31POBbYACUd4A6unmhPpSTAS6NOcKB0lNRuOvvko-m4X3E3er4XCP6Q1w2caCt5wnQnxPngYSm6TuUA"
+          required: true
+        - name: id
+          in: path
+          required: true
+          description: match id
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response with match record information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchRecord"
+              example:
+                matchId: "a418b2c9-bccd-49b7-a646-536061113ddf"
+                players:
+                  - id: "199e84a8-6031-70c7-efe5-89fdf66ba8a6"
+                    rating: 1200.2
+                    newRatings: [200, 200, 200]
+                  - id: "199e84a8-6031-70c7-efe5-89fdf66ba8a6"
+                    rating: 1200.2
+                    newRatings: [200, 200, 200]
+                pgn: "e2e4 e7e5 d1h5 b8c6 f1c4 g8f6 d1f7"
+                startedAt: "2025-02-20T04:25:37.975024301Z"
+                endedAt: "2025-02-20T04:25:37.975024301Z"
+        "404":
+          description: Match record not found
+        "500":
+          description: Internal server error
+
+  /matchResults:
+    get:
+      summary: Get match results of a user
+      description: Get match results of a single user
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            example: "eyJraWQiOiI2WkZjQUx1d2RrK01LRGN0R1poM3pwM2NTSDkwbHlSYUVsXC9iVkFJRlZkUT0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIzOWFlZjRiOC02MGMxLTcwZjAtZWNhOS1lMmU1Y2JkZjVlOTkiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5hcC1zb3V0aGVhc3QtMi5hbWF6b25hd3MuY29tXC9hcC1zb3V0aGVhc3QtMl85eDlydkw3ekoiLCJjb2duaXRvOnVzZXJuYW1lIjoidGVzdHVzZXIxIiwib3JpZ2luX2p0aSI6IjVmMTk4MzQzLTYzOTEtNDAxYi1hYTI5LTY5Y2EwZTJmYzY0ZCIsImF1ZCI6IjVjbmcwdTlnNmZtM2MxanZrcTViaHF0MmxmIiwiZXZlbnRfaWQiOiJlNzU5N2Y3Ni1kYjYyLTQ4NGUtOWRhYS01Nzk4ZGFmNGE5YTIiLCJ0b2tlbl91c2UiOiJpZCIsImF1dGhfdGltZSI6MTc0MDAyNDY1NCwiZXhwIjoxNzQwMDI4MjU0LCJpYXQiOjE3NDAwMjQ2NTQsImp0aSI6ImM3N2EwM2MyLTY5MjItNDNjZC04NTQ4LWU4YzllNmM2YjRmOCIsImVtYWlsIjoidGVzdHVzZXIxQGdtYWlsLmNvbSJ9.Mhco3ZMEy672iYnmCql3sDH5zGDGMT0bF4hOedGrbAktEYtl9B3iPjfinx8aBY3NNGK2Gg5WopKfhw9GZpX1TcpEi_LV6aU0Thx_xYF28_Ou597X3l-Xe1wwviQf-JCxXzwfVPrms8zlkmXO621oQKvT1aVHvpwNmAOuoT-3dqHL_NZt5csLoo5K3Yuwiq5InqiFgwxJEv3Dt-9mTdjqq0DH1LbblNpXdnyjHANTK0u4HpGJ7oGUxuEYTh1p3JKU7fdkC3v31POBbYACUd4A6unmhPpSTAS6NOcKB0lNRuOvvko-m4X3E3er4XCP6Q1w2caCt5wnQnxPngYSm6TuUA"
+          required: true
+        - in: query
+          name: userId
+          required: false
+          description: user id
+          schema:
+            type: string
+            format: uuid
+            example: 199e84a8-6031-70c7-efe5-89fdf66ba8a6
+        - in: query
+          name: limit
+          required: false
+          description: limit
+          schema:
+            type: number
+            format: integer
+            example: 10
+        - in: query
+          name: startKey
+          required: false
+          description: start key to use for querying next page
+          schema:
+            type: object
+            properties:
+              timestamp:
+                type: string
+                format: date-time
+                example: "2025-02-20T04:25:37.975024301Z"
+      responses:
+        "200":
+          description: Successful response with match result list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchResultList"
+              example:
+                items:
+                  - userId: "a418b2c9-bccd-49b7-a646-536061113ddf"
+                    matchId: "a418b2c9-bccd-49b7-a646-536061113ddf"
+                    opponentId: "a418b2c9-bccd-49b7-a646-536061113ddf"
+                    opponentRating: 1234.345
+                    opponentRD: 134.234
+                    result: 0.5
+                    timestamp: "2025-02-20T04:25:37.975024301Z"
+                  - userId: "a418b2c9-bccd-49b7-a646-536061113ddf"
+                    matchId: "a418b2c9-bccd-49b7-a646-536061113ddf"
+                    opponentId: "a418b2c9-bccd-49b7-a646-536061113ddf"
+                    opponentRating: 1234.345
+                    opponentRD: 134.234
+                    result: 0.5
+                    timestamp: "2025-02-20T04:25:37.975024301Z"
+                nextPageToken:
+                  timestamp: "2025-02-20T04:25:37.975024301Z"
+        "400":
+          description: Invalid query parameters
+        "500":
+          description: Internal server error
+
+  /userRatings:
+    get:
+      summary: Get user rating list in descending order
+      description: Get user rating list in descending order
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            example: "eyJraWQiOiI2WkZjQUx1d2RrK01LRGN0R1poM3pwM2NTSDkwbHlSYUVsXC9iVkFJRlZkUT0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIzOWFlZjRiOC02MGMxLTcwZjAtZWNhOS1lMmU1Y2JkZjVlOTkiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5hcC1zb3V0aGVhc3QtMi5hbWF6b25hd3MuY29tXC9hcC1zb3V0aGVhc3QtMl85eDlydkw3ekoiLCJjb2duaXRvOnVzZXJuYW1lIjoidGVzdHVzZXIxIiwib3JpZ2luX2p0aSI6IjVmMTk4MzQzLTYzOTEtNDAxYi1hYTI5LTY5Y2EwZTJmYzY0ZCIsImF1ZCI6IjVjbmcwdTlnNmZtM2MxanZrcTViaHF0MmxmIiwiZXZlbnRfaWQiOiJlNzU5N2Y3Ni1kYjYyLTQ4NGUtOWRhYS01Nzk4ZGFmNGE5YTIiLCJ0b2tlbl91c2UiOiJpZCIsImF1dGhfdGltZSI6MTc0MDAyNDY1NCwiZXhwIjoxNzQwMDI4MjU0LCJpYXQiOjE3NDAwMjQ2NTQsImp0aSI6ImM3N2EwM2MyLTY5MjItNDNjZC04NTQ4LWU4YzllNmM2YjRmOCIsImVtYWlsIjoidGVzdHVzZXIxQGdtYWlsLmNvbSJ9.Mhco3ZMEy672iYnmCql3sDH5zGDGMT0bF4hOedGrbAktEYtl9B3iPjfinx8aBY3NNGK2Gg5WopKfhw9GZpX1TcpEi_LV6aU0Thx_xYF28_Ou597X3l-Xe1wwviQf-JCxXzwfVPrms8zlkmXO621oQKvT1aVHvpwNmAOuoT-3dqHL_NZt5csLoo5K3Yuwiq5InqiFgwxJEv3Dt-9mTdjqq0DH1LbblNpXdnyjHANTK0u4HpGJ7oGUxuEYTh1p3JKU7fdkC3v31POBbYACUd4A6unmhPpSTAS6NOcKB0lNRuOvvko-m4X3E3er4XCP6Q1w2caCt5wnQnxPngYSm6TuUA"
+          required: true
+        - in: query
+          name: limit
+          required: false
+          description: limit
+          schema:
+            type: number
+            format: integer
+            example: 10
+        - in: query
+          name: startKey
+          required: false
+          description: start key to use for querying next page
+          schema:
+            type: object
+            properties:
+              rating:
+                type: number
+                format: float
+                example: 1344.5
+      responses:
+        "200":
+          description: Successful response with user rating list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRatingList"
+              example:
+                items:
+                  - userId: a418b2c9-bccd-49b7-a646-536061113ddf
+                    rating: 1384.5
+                  - userId: a418b2c9-bccd-49b7-a646-536061113ddf
+                    rating: 1234.5
+                  - userId: a418b2c9-bccd-49b7-a646-536061113ddf
+                    rating: 1124.5
+                nextPageToken:
+                  rating: 1124.5
+        "400":
+          description: Invalid query parameters
+        "500":
+          description: Internal server error
+
+components:
+  schemas:
+    ActiveMatch:
+      $ref: "./components/schemas/ActiveMatch.yaml#/ActiveMatch"
+    User:
+      $ref: "./components/schemas/User.yaml#/User"
+    MatchRecord:
+      $ref: "./components/schemas/MatchRecord.yaml#/MatchRecord"
+    MatchResultList:
+      $ref: "./components/schemas/MatchResult.yaml#/MatchResultList"
+    UserRatingList:
+      $ref: "./components/schemas/UserRating.yaml#/UserRatingList"

@@ -1,0 +1,23 @@
+UserRatingList:
+  type: object
+  properties:
+    items:
+      type: array
+      items:
+        $ref: "#/UserRating"
+    nextPageToken:
+      type: objects
+      properties:
+        rating:
+          type: number
+          format: float
+
+UserRating:
+  type: object
+  properties:
+    userId:
+      type: string
+      format: uuid
+    rating:
+      type: number
+      format: float

@@ -1,0 +1,279 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: WebSocket Stack for Slchess
+
+Globals:
+  Function:
+    Timeout: 5
+    MemorySize: 128
+    Architectures:
+      - arm64
+
+Parameters:
+  StackName:
+    Type: String
+  DeploymentStage:
+    Type: String
+    Default: dev
+
+Resources:
+  ### WebSocket API Gateway ###
+  WebsocketApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub "${StackName}-websocket-api"
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: $request.body.action
+
+  WebsocketApiDeployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    Properties:
+      ApiId: !Ref WebsocketApi
+    DependsOn:
+      - ConnectRoute
+      - DisconnectRoute
+      - QueuingRoute
+      - EvaluateRoute
+
+  SlchessWebsocketApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref WebsocketApi
+      DeploymentId: !Ref WebsocketApiDeployment
+      StageName: !Ref DeploymentStage
+
+  ### Connection Management ###
+  ConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebsocketApi
+      RouteKey: $connect
+      AuthorizationType: NONE
+      Target: !Sub "integrations/${ConnectIntegration}"
+
+  ConnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebsocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ConnectFunction.Arn}/invocations"
+
+  ConnectFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-Connect"
+      CodeUri: ../cmd/lambda/connect/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue ConnectionsTableName
+      Environment:
+        Variables:
+          CONNECTIONS_TABLE: !ImportValue ConnectionsTableName
+          COGNITO_USER_POOL_ID: !ImportValue UserPoolId
+          CONNECTIONS_TABLE_NAME: !ImportValue ConnectionsTableName
+
+  ConnectFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ConnectFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApi}/*/$connect"
+
+  ### Disconnect Handling ###
+  DisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebsocketApi
+      RouteKey: $disconnect
+      AuthorizationType: NONE
+      Target: !Sub "integrations/${DisconnectIntegration}"
+
+  DisconnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebsocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DisconnectFunction.Arn}/invocations"
+
+  DisconnectFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-Disconnect"
+      CodeUri: ../cmd/lambda/disconnect/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue ConnectionsTableName
+      Environment:
+        Variables:
+          CONNECTIONS_TABLE_NAME: !ImportValue ConnectionsTableName
+
+  DisconnectFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref DisconnectFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApi}/*/$disconnect"
+
+  ### Match Queuing ###
+  QueuingRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebsocketApi
+      RouteKey: queuing
+      AuthorizationType: NONE
+      Target: !Sub "integrations/${QueuingIntegration}"
+
+  QueuingIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebsocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${QueuingFunction.Arn}/invocations"
+
+  QueuingFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-Queuing"
+      CodeUri: ../cmd/lambda/queuing/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue ConnectionsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue UserMatchesTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue ActiveMatchesTableName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "execute-api:ManageConnections"
+              Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApi}/*"
+      Environment:
+        Variables:
+          WEBSOCKET_API_ID: !Ref WebsocketApi
+          WEBSOCKET_API_STAGE: !Ref DeploymentStage
+          CONNECTIONS_TABLE_NAME: !ImportValue ConnectionsTableName
+          USER_MATCHES_TABLE_NAME: !ImportValue UserMatchesTableName
+          ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
+
+  QueuingFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref QueuingFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApi}/*/queuing"
+
+  ### Evaluation ###
+  EvaluateRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebsocketApi
+      RouteKey: evaluate
+      AuthorizationType: NONE
+      Target: !Sub "integrations/${EvaluateIntegration}"
+
+  EvaluateIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebsocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EvaluateFunction.Arn}/invocations"
+
+  EvaluateFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-Evaluate"
+      CodeUri: ../cmd/lambda/evaluate/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Timeout: 30
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue EvaluationsTableName
+        - SQSSendMessagePolicy:
+            QueueName: !ImportValue EvaluationRequestQueueName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "execute-api:ManageConnections"
+              Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApi}/*"
+        - EcsRunTaskPolicy:
+            TaskDefinition: !ImportValue StofinetDefinitionArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "ecs:ListTasks"
+                - "ecs:DescribeTasks"
+                - "ecs:UpdateService"
+              Resource: "*"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "ec2:DescribeNetworkInterfaces"
+              Resource: "*"
+
+      Environment:
+        Variables:
+          WEBSOCKET_API_ID: !Ref WebsocketApi
+          WEBSOCKET_API_STAGE: !Ref DeploymentStage
+          EVALUATION_REQUEST_QUEUE_URL: !ImportValue EvaluationRequestQueueUrl
+          EVALUATIONS_TABLE_NAME: !ImportValue EvaluationsTableName
+          STOFINET_CLUSTER_NAME: !ImportValue StofinetClusterName
+          STOFINET_SERVICE_NAME: !ImportValue StofinetServiceName
+
+  EvaluateFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref EvaluateFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApi}/*/evaluate"
+
+  ### IAM Role ###
+  ApiGatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ApiGatewayRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ""
+            Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeLambdaPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: "*"
+
+Outputs:
+  WebsocketApiUrl:
+    Value: !Sub "wss://${WebsocketApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}"
+    Export:
+      Name: WebsocketApiUrl
+
+  WebsocketApiId:
+    Value: !Ref WebsocketApi
+    Export:
+      Name: WebsocketApiId

@@ -1,0 +1,23 @@
+User:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    username:
+      type: string
+      format: uuid
+    locale:
+      type: string
+    picture:
+      type: string
+    phone:
+      type: string
+    rating:
+      type: number
+      format: float
+    membership:
+      type: string
+    createdAt:
+      type: string
+      format: date-time

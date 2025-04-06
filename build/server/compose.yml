@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: ./build/server/server.dockerfile
+    container_name: server
+    ports:
+      - "7202:7202"
+    volumes:
+      - ~/.aws:/root/.aws:ro # Mount AWS credentials

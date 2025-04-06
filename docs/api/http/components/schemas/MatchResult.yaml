@@ -1,0 +1,38 @@
+MatchResultList:
+  type: object
+  properties:
+    items:
+      type: array
+      items:
+        $ref: "#/MatchResult"
+    nextPageToken:
+      type: objects
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+
+MatchResult:
+  type: object
+  properties:
+    userId:
+      type: string
+      format: uuid
+    matchId:
+      type: string
+      format: uuid
+    opponentId:
+      type: string
+      format: uuid
+    opponentRating:
+      type: number
+      format: float
+    opponentRD:
+      type: number
+      format: float
+    result:
+      type: number
+      format: float
+    timestamp:
+      type: string
+      format: date-time

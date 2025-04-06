@@ -1,0 +1,42 @@
+version: "3"
+
+includes:
+  utils:
+    taskfile: ./Util.yml
+    internal: true
+    dir: ../
+
+tasks:
+  authenticate-test-users:
+    desc: Return 2 id tokens for testing api
+    deps: [create-test-users]
+    cmds:
+      - mkdir -p ./configs/e2e
+      - echo "USER_1_ID_TOKEN=$(aws cognito-idp initiate-auth --region $AWS_REGION --client-id $COGNITO_USER_POOL_CLIENT_ID --cli-input-json file://./test/cognito/user1.json --output json | jq -r '.AuthenticationResult.IdToken')" > ./configs/e2e/e2e.env
+      - echo "USER_2_ID_TOKEN=$(aws cognito-idp initiate-auth --region $AWS_REGION --client-id $COGNITO_USER_POOL_CLIENT_ID --cli-input-json file://./test/cognito/user2.json --output json | jq -r '.AuthenticationResult.IdToken')" >> ./configs/e2e/e2e.env
+
+  create-test-users:
+    deps: [utils:check-cognito-env]
+    internal: true
+    status:
+      - aws cognito-idp admin-get-user --user-pool-id $COGNITO_USER_POOL_ID --cli-input-json file://./test/cognito/confirm_user1.json >/dev/null 2>&1
+      - aws cognito-idp admin-get-user --user-pool-id $COGNITO_USER_POOL_ID --cli-input-json file://./test/cognito/confirm_user2.json >/dev/null 2>&1
+    cmds:
+      - aws cognito-idp sign-up --client-id $COGNITO_USER_POOL_CLIENT_ID --cli-input-json file://./test/cognito/signup_user1.json
+      - aws cognito-idp sign-up --client-id $COGNITO_USER_POOL_CLIENT_ID --cli-input-json file://./test/cognito/signup_user2.json
+      - task: confirm-test-users
+
+  confirm-test-users:
+    internal: true
+    cmds:
+      - aws cognito-idp admin-confirm-sign-up --user-pool-id $COGNITO_USER_POOL_ID --cli-input-json file://./test/cognito/confirm_user1.json
+      - aws cognito-idp admin-confirm-sign-up --user-pool-id $COGNITO_USER_POOL_ID --cli-input-json file://./test/cognito/confirm_user2.json
+
+  delete-test-users:
+    deps: [utils:check-cognito-env]
+    preconditions:
+      - aws cognito-idp admin-get-user --user-pool-id $COGNITO_USER_POOL_ID --cli-input-json file://./test/cognito/confirm_user1.json >/dev/null 2>&1
+      - aws cognito-idp admin-get-user --user-pool-id $COGNITO_USER_POOL_ID --cli-input-json file://./test/cognito/confirm_user2.json >/dev/null 2>&1
+    cmds:
+      - aws cognito-idp admin-delete-user --user-pool-id $COGNITO_USER_POOL_ID --cli-input-json file://./test/cognito/confirm_user1.json
+      - aws cognito-idp admin-delete-user --user-pool-id $COGNITO_USER_POOL_ID --cli-input-json file://./test/cognito/confirm_user2.json

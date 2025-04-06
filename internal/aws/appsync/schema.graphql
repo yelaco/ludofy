@@ -1,0 +1,76 @@
+type PlayerState @aws_cognito_user_pools @aws_iam {
+  Clock: String! @aws_cognito_user_pools @aws_iam
+  Status: String! @aws_cognito_user_pools @aws_iam
+}
+
+type Move @aws_cognito_user_pools @aws_iam {
+  PlayerId: ID! @aws_cognito_user_pools @aws_iam
+  Uci: String! @aws_cognito_user_pools @aws_iam
+}
+
+type MatchState @aws_cognito_user_pools @aws_iam {
+  Id: ID! @aws_cognito_user_pools @aws_iam
+  MatchId: ID! @aws_cognito_user_pools @aws_iam
+  PlayerStates: [PlayerState!]! @aws_cognito_user_pools @aws_iam
+  GameState: String! @aws_cognito_user_pools @aws_iam
+  Move: Move! @aws_cognito_user_pools @aws_iam
+  Ply: Int! @aws_cognito_user_pools @aws_iam
+  Timestamp: AWSDateTime! @aws_cognito_user_pools @aws_iam
+}
+
+type Message @aws_cognito_user_pools @aws_iam {
+  Id: ID! @aws_cognito_user_pools @aws_iam
+  ConversationId: ID! @aws_cognito_user_pools @aws_iam
+  SenderId: ID! @aws_cognito_user_pools @aws_iam
+  Content: String! @aws_cognito_user_pools @aws_iam
+  CreatedAt: AWSDateTime! @aws_cognito_user_pools @aws_iam
+}
+
+input PlayerStateInput {
+  clock: String!
+  status: String!
+}
+
+input MoveInput {
+  playerId: ID!
+  uci: String!
+}
+
+input UpdateMatchStateInput {
+  id: ID!
+  matchId: ID!
+  playerStates: [PlayerStateInput!]!
+  gameState: String!
+  move: MoveInput!
+  ply: Int!
+  timestamp: String!
+}
+
+input SendMessageInput {
+  id: ID!
+  conversationId: ID!
+  senderId: ID!
+  content: String!
+}
+
+type Query {
+  getMatchState(matchId: ID!): MatchState @aws_cognito_user_pools @aws_iam
+}
+
+type Mutation {
+  updateMatchState(input: UpdateMatchStateInput!): MatchState
+    @aws_cognito_user_pools
+    @aws_iam
+
+  sendMessage(input: SendMessageInput!): Message
+    @aws_cognito_user_pools
+    @aws_iam
+}
+
+type Subscription {
+  onMatchStateUpdated(MatchId: ID!): MatchState
+    @aws_subscribe(mutations: ["updateMatchState"])
+
+  onMessageSent(ConversationId: ID!): Message
+    @aws_subscribe(mutations: ["sendMessage"])
+}

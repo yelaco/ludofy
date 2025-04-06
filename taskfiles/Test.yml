@@ -1,0 +1,32 @@
+version: "3"
+
+includes:
+  utils:
+    taskfile: ./Util.yml
+    internal: true
+    dir: ../
+  server:
+    taskfile: ./Server.yml
+    internal: true
+    dir: ../
+  cognito:
+    taskfile: ./Cognito.yml
+    internal: true
+    dir: ../
+
+tasks:
+  server-local:
+    desc: Run test files
+    ignore_error: true
+    deps: [utils:check-apigateway-env]
+    cmds:
+      - task: server:up-detach
+      - export LOCAL=true && go test -v ./test/e2e/*.go
+      - task: server:down
+
+  server:
+    desc: Run test files
+    ignore_error: true
+    deps: [utils:check-apigateway-env]
+    cmds:
+      - go test -v ./test/e2e/*.go

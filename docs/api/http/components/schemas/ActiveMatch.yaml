@@ -1,0 +1,42 @@
+ActiveMatch:
+  type: object
+  properties:
+    matchId:
+      type: string
+      format: uuid
+    player1:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        rating:
+          type: number
+          format: float
+        newRatings:
+          type: array
+          items:
+            type: number
+            format: float
+    player2:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        rating:
+          type: number
+          format: float
+        newRatings:
+          type: array
+          items:
+            type: number
+            format: float
+    gameMode:
+      type: string
+    server:
+      type: string
+      format: ipv4
+    createdAt:
+      type: string
+      format: date-time

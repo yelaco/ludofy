@@ -1,0 +1,7 @@
+{
+  "AuthFlow": "USER_PASSWORD_AUTH",
+  "AuthParameters": {
+    "USERNAME": "testuser2",
+    "PASSWORD": "passWord123"
+  }
+}

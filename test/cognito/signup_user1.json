@@ -1,0 +1,10 @@
+{
+  "Username": "testuser1",
+  "Password": "passWord123",
+  "UserAttributes": [
+    {
+      "Name": "email",
+      "Value": "testuser1@gmail.com"
+    }
+  ]
+}

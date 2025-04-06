@@ -1,0 +1,8 @@
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: ./build/stofinet/stofinet.dockerfile
+    container_name: stofinet
+    volumes:
+      - ~/.aws:/root/.aws:ro # Mount AWS credentials

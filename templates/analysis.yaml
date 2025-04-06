@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Analysis Stack for Slchess
+
+Parameters:
+  StackName:
+    Type: String
+  DeploymentStage:
+    Type: String
+    Default: dev
+
+Resources:
+  EvaluationRequestQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${StackName}-${DeploymentStage}-EvaluationRequestQueue"
+      MessageRetentionPeriod: 300
+
+Outputs:
+  EvaluationWorkQueueName:
+    Value: !GetAtt EvaluationRequestQueue.QueueName
+    Export:
+      Name: EvaluationRequestQueueName
+
+  EvaluationRequestQueueUrl:
+    Value: !Ref EvaluationRequestQueue
+    Export:
+      Name: EvaluationRequestQueueUrl

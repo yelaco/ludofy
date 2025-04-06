@@ -1,0 +1,29 @@
+MatchRecord:
+  type: object
+  properties:
+    matchId:
+      type: string
+      format: uuid
+    players:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          rating:
+            type: number
+            format: float
+          newRatings:
+            type: array
+            items:
+              type: number
+              format: float
+    pgn:
+      type: string
+    startedAt:
+      type: string
+      format: date-time
+    endedAt:
+      type: string
+      format: date-time

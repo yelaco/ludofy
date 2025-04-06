@@ -1,0 +1,38 @@
+version: "3"
+
+tasks:
+  check-base-env:
+    internal: true
+    preconditions:
+      - sh: "test -f ./configs/aws/base.env"
+        msg: "base.env file not generated. Try running 'env:base' task"
+
+  check-cognito-env:
+    internal: true
+    preconditions:
+      - sh: "test -f ./configs/aws/cognito.env"
+        msg: "cognito.env file not generated. Try running 'env:aws' task"
+
+  check-lambda-env:
+    internal: true
+    preconditions:
+      - sh: "test -f ./configs/aws/lambda.env"
+        msg: "lambda.env file not generated. Try running 'env:aws' task"
+
+  check-apigateway-env:
+    internal: true
+    preconditions:
+      - sh: "test -f ./configs/aws/apigateway.env"
+        msg: "apigateway.env file not generated. Try running 'env:aws' task"
+
+  check-appsync-env:
+    internal: true
+    preconditions:
+      - sh: "test -f ./configs/aws/appsync.env"
+        msg: "appsync.env file not generated. Try running 'env:aws' task"
+
+  check-stofinet-env:
+    internal: true
+    preconditions:
+      - sh: "test -f ./configs/stofinet/app.env"
+        msg: "app.env file not generated. Try running 'env:stofinet' task"

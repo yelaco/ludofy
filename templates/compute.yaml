@@ -1,0 +1,359 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Compute Stack for Slchess
+
+Globals:
+  Function:
+    Timeout: 5
+    MemorySize: 128
+    Architectures:
+      - arm64
+
+Parameters:
+  StackName:
+    Type: String
+  ServerImageUri:
+    Type: String
+  StofinetImageUri:
+    Type: String
+  DeploymentStage:
+    Type: String
+
+Resources:
+  ### ECS Cluster ###
+  ServerCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub "${StackName}-${DeploymentStage}-server-cluster"
+
+  StofinetCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub "${StackName}-${DeploymentStage}-stofinet-cluster"
+      CapacityProviders:
+        - FARGATE_SPOT
+
+  ### Task Definition ###
+  ServerDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub "${StackName}-${DeploymentStage}-server"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: "256"
+      Memory: "512"
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt ServerRole.Arn
+      ContainerDefinitions:
+        - Image: !Ref ServerImageUri
+          Name: !Sub "${StackName}-${DeploymentStage}-server"
+          Essential: true
+          PortMappings:
+            - ContainerPort: 7202
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub "/${StackName}/${DeploymentStage}/ecs/server"
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          Environment:
+            - Name: AWS_DEFAULT_REGION
+              Value: !Ref AWS::Region
+            - Name: ECS_ENABLE_CONTAINER_METADATA
+              Value: "true"
+
+  StofinetDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub "${StackName}-${DeploymentStage}-stofinet"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: "1024"
+      Memory: "2048"
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt StofinetRole.Arn
+      ContainerDefinitions:
+        - Image: !Ref StofinetImageUri
+          Name: !Sub "${StackName}-${DeploymentStage}-stofinet"
+          Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub "/${StackName}/${DeploymentStage}/ecs/stofinet"
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          Environment:
+            - Name: AWS_DEFAULT_REGION
+              Value: !Ref AWS::Region
+            - Name: ECS_ENABLE_CONTAINER_METADATA
+              Value: "true"
+
+  ### ECS Service ###
+  ServerService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ServerCluster
+      ServiceName: !Sub "${StackName}-${DeploymentStage}-server-service"
+      LaunchType: FARGATE
+      DesiredCount: 0
+      TaskDefinition: !Ref ServerDefinition
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - subnet-08afaaea0b1e4f825
+            - subnet-0f7183aa53381f50c
+            - subnet-0642049eeace8e1b3
+          SecurityGroups:
+            - sg-003fd8c2326289ec4
+          AssignPublicIp: ENABLED
+
+  StofinetService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref StofinetCluster
+      ServiceName: !Sub "${StackName}-${DeploymentStage}-stofinet-service"
+      DesiredCount: 0
+      TaskDefinition: !Ref StofinetDefinition
+      CapacityProviderStrategy:
+        - CapacityProvider: FARGATE_SPOT
+          Weight: 1
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - subnet-08afaaea0b1e4f825
+            - subnet-0f7183aa53381f50c
+            - subnet-0642049eeace8e1b3
+          SecurityGroups:
+            - sg-003fd8c2326289ec4
+          AssignPublicIp: ENABLED
+
+  ### IAM Roles ###
+  ServerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ServerRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "ecs-tasks.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: LambdaInvokePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: "*"
+        - PolicyName: AppSyncAccessPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: appsync:GraphQL
+                Resource: !Sub
+                  - "${ApiArn}/*"
+                  - ApiArn: !ImportValue AppSyncApiArn
+        - PolicyName: DynamoDBAccessPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource:
+                  - !ImportValue UserMatchesTableArn
+                  - !ImportValue ActiveMatchesTableArn
+                  - !ImportValue SpectatorConversationsTableArn
+                  - !ImportValue MatchStatesTableArn
+                  - !Sub
+                    - "${MatchStatesTableArn}/index/MatchIndex"
+                    - MatchStatesTableArn: !ImportValue MatchStatesTableArn
+        - PolicyName: ECSTaskProtectionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecs:UpdateTaskProtection
+                Resource:
+                  - !Sub "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task/${ServerCluster}/*"
+
+  StofinetRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: StofinetRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "ecs-tasks.amazonaws.com"
+            Action: "sts:AssumeRole"
+
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ECSTaskExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:GetAuthorizationToken
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  ### Auto Scaling ###
+  ServerAutoScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 2
+      MinCapacity: 0
+      ResourceId: !Sub service/${ServerCluster}/${ServerService.Name}
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  ServerAutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: ServerAutoScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ServerAutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 70.0
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 60
+
+  StofinetAutoScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 2
+      MinCapacity: 0
+      ResourceId: !Sub service/${StofinetCluster}/${StofinetService.Name}
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  StofinetAutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: StofinetAutoScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref StofinetAutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 70.0
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        ScaleInCooldown: 1800
+        ScaleOutCooldown: 60
+
+  ### Lambda ###
+  EndGameFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-EndGame"
+      CodeUri: ../cmd/lambda/endGame/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Timeout: 10
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue UserMatchesTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue ActiveMatchesTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue MatchRecordsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue MatchResultsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue UserRatingsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue SpectatorConversationsTableName
+      Environment:
+        Variables:
+          USER_MATCHES_TABLE_NAME: !ImportValue UserMatchesTableName
+          ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
+          MATCH_STATES_TABLE_NAME: !ImportValue MatchStatesTableName
+          MATCH_RECORDS_TABLE_NAME: !ImportValue MatchRecordsTableName
+          MATCH_RESULTS_TABLE_NAME: !ImportValue MatchResultsTableName
+          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
+          SPECTATOR_CONVERSATIONS_TABLE_NAME: !ImportValue SpectatorConversationsTableName
+
+  AbortGameFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-AbortGame"
+      CodeUri: ../cmd/lambda/abortGame/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Timeout: 10
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue UserMatchesTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue ActiveMatchesTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue SpectatorConversationsTableName
+      Environment:
+        Variables:
+          USER_MATCHES_TABLE_NAME: !ImportValue UserMatchesTableName
+          ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
+          SPECTATOR_CONVERSATIONS_TABLE_NAME: !ImportValue SpectatorConversationsTableName
+
+Outputs:
+  ServerClusterName:
+    Value: !Ref ServerCluster
+    Export:
+      Name: ServerClusterName
+
+  ServerServiceName:
+    Value: !GetAtt ServerService.Name
+    Export:
+      Name: ServerServiceName
+
+  ServerDefinitionArn:
+    Value: !Ref ServerDefinition
+    Export:
+      Name: ServerDefinitionArn
+
+  StofinetClusterName:
+    Value: !Ref StofinetCluster
+    Export:
+      Name: StofinetClusterName
+
+  StofinetServiceName:
+    Value: !GetAtt StofinetService.Name
+    Export:
+      Name: StofinetServiceName
+
+  StofinetDefinitionArn:
+    Value: !Ref StofinetDefinition
+    Export:
+      Name: StofinetDefinitionArn

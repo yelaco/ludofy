@@ -1,0 +1,573 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Storage Stack for Slchess
+
+Globals:
+  Function:
+    Timeout: 5
+    MemorySize: 128
+    Architectures:
+      - arm64
+
+Parameters:
+  StackName:
+    Type: String
+  DeploymentStage:
+    Type: String
+    Default: dev
+
+Resources:
+  ### S3 ###
+  Puzzles:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${StackName}-${DeploymentStage}-puzzles"
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - "*"
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+            AllowedHeaders:
+              - "*"
+
+  Images:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${StackName}-${DeploymentStage}-images"
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - "*"
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+            AllowedHeaders:
+              - "*"
+
+  Avatars:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${StackName}-${DeploymentStage}-avatars"
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - "*"
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+            AllowedHeaders:
+              - "*"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: false
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: false
+
+  AvatarsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref Avatars
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Sub "${Avatars.Arn}/*"
+
+  PostAvatarUploadFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-PostAvatarUpload"
+      CodeUri: ../cmd/lambda/postAvatarUpload/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Timeout: 10
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref Images
+        - S3CrudPolicy:
+            BucketName: !Ref Avatars
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserProfiles
+      Environment:
+        Variables:
+          AVATAR_BUCKET_NAME: !Ref Avatars
+          USER_PROFILES_TABLE_NAME: !Ref UserProfiles
+
+  S3InvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PostAvatarUploadFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt Images.Arn
+
+  ApplyNotificationFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /
+      Policies:
+        - PolicyName: S3BucketNotificationPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowBucketNotification
+                Effect: Allow
+                Action: s3:PutBucketNotification
+                Resource:
+                  - !Sub "arn:aws:s3:::${Images}"
+                  - !Sub "arn:aws:s3:::${Images}/*"
+
+  ApplyBucketNotificationFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-ApplyBucketNotification"
+      CodeUri: ../cmd/lambda/applyBucketNotification/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Role: !GetAtt ApplyNotificationFunctionRole.Arn
+      Timeout: 240
+
+  ApplyAvatarUploadNotification:
+    Type: Custom::ApplyNotification
+    Properties:
+      ServiceToken: !GetAtt ApplyBucketNotificationFunction.Arn
+      S3Bucket: !Ref Images
+      FunctionARN: !GetAtt PostAvatarUploadFunction.Arn
+      PrefixValue: "avatars/"
+      NotificationId: S3ObjectCreatedEvent
+
+  ### DynamoDB Tables ###
+  Connections:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-Connections"
+      AttributeDefinitions:
+        - AttributeName: Id
+          AttributeType: S
+        - AttributeName: UserId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserIdIndex
+          KeySchema:
+            - AttributeName: UserId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  UserProfiles:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-UserProfiles"
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  PuzzleProfiles:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-PuzzleProfiles"
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  UserRatings:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-UserRatings"
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+        - AttributeName: Rating
+          AttributeType: N
+        - AttributeName: PartitionKey # Static partition key for GSI
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: RatingIndex
+          KeySchema:
+            - AttributeName: PartitionKey # Static key
+              KeyType: HASH
+            - AttributeName: Rating
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  UserMatches:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-UserMatches"
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  MatchmakingTickets:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-MatchmakingTickets"
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  ActiveMatches:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-ActiveMatches"
+      AttributeDefinitions:
+        - AttributeName: MatchId
+          AttributeType: S
+        - AttributeName: AverageRating
+          AttributeType: N
+        - AttributeName: PartitionKey # Static partition key for GSI
+          AttributeType: S
+      KeySchema:
+        - AttributeName: MatchId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: AverageRatingIndex
+          KeySchema:
+            - AttributeName: PartitionKey
+              KeyType: HASH
+            - AttributeName: AverageRating
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  MatchStates:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-MatchStates"
+      AttributeDefinitions:
+        - AttributeName: Id
+          AttributeType: S
+        - AttributeName: MatchId
+          AttributeType: S
+        - AttributeName: Ply
+          AttributeType: N
+      KeySchema:
+        - AttributeName: Id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: MatchIndex
+          KeySchema:
+            - AttributeName: MatchId
+              KeyType: HASH
+            - AttributeName: Ply
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  MatchRecords:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-MatchRecords"
+      AttributeDefinitions:
+        - AttributeName: MatchId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: MatchId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  MatchResults:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-MatchResults"
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+        - AttributeName: Timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+        - AttributeName: Timestamp
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: TTL
+        Enabled: true
+      BillingMode: PAY_PER_REQUEST
+
+  Messages:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-Messages"
+      AttributeDefinitions:
+        - AttributeName: Id
+          AttributeType: S
+        - AttributeName: ConversationId
+          AttributeType: S
+        - AttributeName: CreatedAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: ConversationIndex
+          KeySchema:
+            - AttributeName: ConversationId
+              KeyType: HASH
+            - AttributeName: CreatedAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  SpectatorConversations:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-SpectatorConversations"
+      AttributeDefinitions:
+        - AttributeName: MatchId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: MatchId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  Friendships:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-Friendships"
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+        - AttributeName: FriendId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+        - AttributeName: FriendId
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: FriendIndex
+          KeySchema:
+            - AttributeName: FriendId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  FriendRequests:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-FriendRequests"
+      AttributeDefinitions:
+        - AttributeName: SenderId
+          AttributeType: S
+        - AttributeName: ReceiverId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: SenderId
+          KeyType: HASH
+        - AttributeName: ReceiverId
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: ReceiverIndex
+          KeySchema:
+            - AttributeName: ReceiverId
+              KeyType: HASH
+            - AttributeName: SenderId
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  Evaluations:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-Evaluations"
+      AttributeDefinitions:
+        - AttributeName: Fen
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Fen
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: TTL
+        Enabled: true
+      BillingMode: PAY_PER_REQUEST
+
+  ApplicationEndpoints:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-ApplicationEndpoints"
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+        - AttributeName: DeviceToken
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+        - AttributeName: DeviceToken
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+Outputs:
+  ConnectionsTableName:
+    Value: !Ref Connections
+    Export:
+      Name: ConnectionsTableName
+
+  UserProfilesTableName:
+    Value: !Ref UserProfiles
+    Export:
+      Name: UserProfilesTableName
+
+  PuzzleProfilesTableName:
+    Value: !Ref PuzzleProfiles
+    Export:
+      Name: PuzzleProfilesTableName
+
+  UserRatingsTableName:
+    Value: !Ref UserRatings
+    Export:
+      Name: UserRatingsTableName
+
+  UserMatchesTableName:
+    Value: !Ref UserMatches
+    Export:
+      Name: UserMatchesTableName
+
+  ActiveMatchesTableName:
+    Value: !Ref ActiveMatches
+    Export:
+      Name: ActiveMatchesTableName
+
+  MatchStatesTableName:
+    Value: !Ref MatchStates
+    Export:
+      Name: MatchStatesTableName
+
+  MatchmakingTicketsTableName:
+    Value: !Ref MatchmakingTickets
+    Export:
+      Name: MatchmakingTicketsTableName
+
+  MessagesTableName:
+    Value: !Ref Messages
+    Export:
+      Name: MessagesTableName
+
+  MatchRecordsTableName:
+    Value: !Ref MatchRecords
+    Export:
+      Name: MatchRecordsTableName
+
+  MatchResultsTableName:
+    Value: !Ref MatchResults
+    Export:
+      Name: MatchResultsTableName
+
+  SpectatorConversationsTableName:
+    Value: !Ref SpectatorConversations
+    Export:
+      Name: SpectatorConversationsTableName
+
+  EvaluationsTableName:
+    Value: !Ref Evaluations
+    Export:
+      Name: EvaluationsTableName
+
+  FriendshipsTableName:
+    Value: !Ref Friendships
+    Export:
+      Name: FriendshipsTableName
+
+  FriendRequestsTableName:
+    Value: !Ref FriendRequests
+    Export:
+      Name: FriendRequestsTableName
+
+  ApplicationEndpointsTableName:
+    Value: !Ref ApplicationEndpoints
+    Export:
+      Name: ApplicationEndpointsTableName
+
+  PuzzlesBucketName:
+    Value: !Ref Puzzles
+    Export:
+      Name: PuzzlesBucketName
+
+  ImagesBucketName:
+    Value: !Ref Images
+    Export:
+      Name: ImagesBucketName
+
+  AvatarsBucketName:
+    Value: !Ref Avatars
+    Export:
+      Name: AvatarsBucketName
+
+  ActiveMatchesTableArn:
+    Value: !GetAtt ActiveMatches.Arn
+    Export:
+      Name: ActiveMatchesTableArn
+
+  MatchStatesTableArn:
+    Value: !GetAtt MatchStates.Arn
+    Export:
+      Name: MatchStatesTableArn
+
+  UserMatchesTableArn:
+    Value: !GetAtt UserMatches.Arn
+    Export:
+      Name: UserMatchesTableArn
+
+  SpectatorConversationsTableArn:
+    Value: !GetAtt SpectatorConversations.Arn
+    Export:
+      Name: SpectatorConversationsTableArn
+
+  MessagesTableArn:
+    Value: !GetAtt Messages.Arn
+    Export:
+      Name: MessagesTableArn
