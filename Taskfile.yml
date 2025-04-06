@@ -10,7 +10,6 @@ dotenv:
   - ./configs/aws/cognito.env
   - ./configs/aws/lambda.env
   - ./configs/aws/apigateway.env
-  - ./configs/stofinet/app.env
 
 includes:
   cognito:
@@ -18,7 +17,6 @@ includes:
     dir: .
   stack: ./taskfiles/Stack.yml
   server: ./taskfiles/Server.yml
-  stofinet: ./taskfiles/Stofinet.yml
   env: ./taskfiles/Env.yml
   doc: ./taskfiles/Doc.yml
   test: ./taskfiles/Test.yml

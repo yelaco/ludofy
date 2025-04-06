@@ -4,14 +4,17 @@ Description: Root Stack for Slchess Backend
 
 Parameters:
   ServerImageUri:
-    Type: String
+    Type: List<String>
     Description: "URI of the Docker image for game server in ECR"
-  StofinetImageUri:
-    Type: String
-    Description: "URI of the Docker image for stofinet node in ECR"
   DeploymentStage:
     Type: String
     Default: dev
+  DeployChatService:
+    Type: String
+    AllowedValues:
+      - "true"
+      - "false"
+    Default: "true"
 
 Resources:
   StorageStack:

@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Dynamically generated SAM template
+
+Resources:
+{{- if .IncludeStackA }}
+  StackA:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./stack-a.yaml
+{{- end }}
+
+{{- if .IncludeStackB }}
+  StackB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./stack-b.yaml
+{{- end }}
