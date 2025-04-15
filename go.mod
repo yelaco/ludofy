@@ -9,26 +9,19 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.62
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.18.8
 	github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi v1.24.1
-	github.com/aws/aws-sdk-go-v2/service/athena v1.50.1
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.42.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.210.0
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.54.2
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.70.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.78.2
 	github.com/aws/aws-sdk-go-v2/service/sns v1.34.2
-	github.com/aws/aws-sdk-go-v2/service/sqs v1.38.1
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.17
 	github.com/disintegration/imaging v1.6.2
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/joho/godotenv v1.5.1
-	github.com/notnil/chess v1.10.0
 	github.com/spf13/viper v1.20.0
-	github.com/stretchr/testify v1.10.0
-	github.com/stripe/stripe-go/v81 v81.4.0
 	go.uber.org/zap v1.27.0
-	gopkg.in/freeeve/pgn.v1 v1.0.1
 )
 
 require (

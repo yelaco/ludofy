@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -28,12 +27,12 @@ func handler(ctx context.Context, event json.RawMessage) error {
 	}
 	matchRecord := dtos.MatchRecordRequestToEntity(matchRecordReq)
 
-	for _, player := range matchRecordReq.Players {
-		err := storageClient.DeleteUserMatch(ctx, player.Id)
+	for _, player := range matchRecord.Players {
+		err := storageClient.DeleteUserMatch(ctx, player.GetPlayerId())
 		if err != nil {
 			return fmt.Errorf(
 				"failed to delete user match: [userId: %s] - %w",
-				player.Id,
+				player.GetPlayerId(),
 				err,
 			)
 		}
@@ -49,39 +48,39 @@ func handler(ctx context.Context, event json.RawMessage) error {
 		return fmt.Errorf("failed to put match record: %w", err)
 	}
 
-	for i, player := range matchRecordReq.Players {
+	for _, player := range matchRecordReq.Players {
 		playerRating := entities.UserRating{
-			UserId:       player.Id,
+			UserId:       player.GetPlayerId(),
 			PartitionKey: "UserRatings",
-			Rating:       player.NewRating,
-			RD:           player.NewRD,
+			Rating:       1200,
+			RD:           200,
 		}
 		err = storageClient.PutUserRating(ctx, playerRating)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to put player rating: [userId: %s] - %w",
-				player.Id,
+				player.GetPlayerId(),
 				err,
 			)
 		}
 
-		playerMatchResult := entities.MatchResult{
-			UserId:         player.Id,
-			MatchId:        matchRecordReq.MatchId,
-			OpponentId:     matchRecordReq.Players[1-i].Id,
-			OpponentRating: matchRecordReq.Players[1-i].OldRating,
-			OpponentRD:     matchRecordReq.Players[1-i].OldRD,
-			Result:         matchRecordReq.Results[i],
-			Timestamp:      matchRecordReq.EndedAt.Format(time.RFC3339),
-		}
-		err = storageClient.PutMatchResult(ctx, playerMatchResult)
-		if err != nil {
-			return fmt.Errorf(
-				"failed to put user match result: [userId: %s] - %w",
-				player.Id,
-				err,
-			)
-		}
+		// playerMatchResult := entities.MatchResult{
+		// 	UserId:         player.GetPlayerId(),
+		// 	MatchId:        matchRecordReq.MatchId,
+		// 	OpponentId:     matchRecordReq.Players[1-i].Id,
+		// 	OpponentRating: matchRecordReq.Players[1-i].OldRating,
+		// 	OpponentRD:     matchRecordReq.Players[1-i].OldRD,
+		// 	Result:         matchRecordReq.Result[i],
+		// 	Timestamp:      matchRecordReq.EndedAt.Format(time.RFC3339),
+		// }
+		// err = storageClient.PutMatchResult(ctx, playerMatchResult)
+		// if err != nil {
+		// 	return fmt.Errorf(
+		// 		"failed to put user match result: [userId: %s] - %w",
+		// 		player.Id,
+		// 		err,
+		// 	)
+		// }
 	}
 
 	err = storageClient.DeleteSpectatorConversation(ctx, matchRecord.MatchId)

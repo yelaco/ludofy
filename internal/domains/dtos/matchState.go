@@ -13,21 +13,19 @@ var updateMatchStateMutation string
 type MatchStateRequest struct {
 	Id           string               `json:"id"`
 	MatchId      string               `json:"matchId"`
-	PlayerStates []PlayerStateRequest `json:"playerStates"`
-	GameState    string               `json:"gameState"`
+	PlayerStates []PlayerStateRequest `json:"players"`
+	GameState    interface{}          `json:"game"`
 	Move         MoveRequest          `json:"move"`
-	Ply          int                  `json:"ply"`
 	Timestamp    time.Time            `json:"timestamp"`
 }
 
-type PlayerStateRequest struct {
-	Clock  string `json:"clock"`
-	Status string `json:"status"`
+type PlayerStateRequest interface {
+	GetPlayerId() string
 }
 
 type MoveRequest struct {
-	PlayerId string `json:"playerId"`
-	Uci      string `json:"uci"`
+	PlayerId string      `json:"playerId"`
+	Payload  interface{} `json:"payload"`
 }
 
 type MatchStateAppSyncRequest struct {
@@ -35,23 +33,21 @@ type MatchStateAppSyncRequest struct {
 	Variables map[string]interface{} `json:"variables"`
 }
 
-type PlayerStateResponse struct {
-	Clock  string `json:"clock"`
-	Status string `json:"status"`
+type PlayerStateResponse interface {
+	GetPlayerId() string
 }
 
 type MoveResponse struct {
-	PlayerId string `json:"playerId"`
-	Uci      string `json:"uci"`
+	PlayerId string      `json:"playerId"`
+	Payload  interface{} `json:"payload"`
 }
 
 type MatchStateResponse struct {
 	Id           string                `json:"id"`
 	MatchId      string                `json:"matchId"`
-	PlayerStates []PlayerStateResponse `json:"playerStates"`
-	GameState    string                `json:"gameState"`
+	PlayerStates []PlayerStateResponse `json:"players"`
+	GameState    any                   `json:"game"`
 	Move         MoveResponse          `json:"move"`
-	Ply          int                   `json:"ply"`
 	Timestamp    time.Time             `json:"timestamp"`
 }
 
@@ -75,51 +71,38 @@ func NewMatchStateAppSyncRequest(req MatchStateRequest) MatchStateAppSyncRequest
 }
 
 func MatchStateRequestToEntity(req MatchStateRequest) entities.MatchState {
-	return entities.MatchState{
-		Id:      req.Id,
-		MatchId: req.MatchId,
-		PlayerStates: []entities.PlayerState{
-			{
-				Clock:  req.PlayerStates[0].Clock,
-				Status: req.PlayerStates[0].Status,
-			},
-			{
-				Clock:  req.PlayerStates[1].Clock,
-				Status: req.PlayerStates[1].Status,
-			},
-		},
-		GameState: req.GameState,
+	matchState := entities.MatchState{
+		Id:           req.Id,
+		MatchId:      req.MatchId,
+		PlayerStates: make([]entities.PlayerState, 0, len(req.PlayerStates)),
+		GameState:    req.GameState,
 		Move: entities.Move{
 			PlayerId: req.Move.PlayerId,
-			Uci:      req.Move.Uci,
+			Payload:  req.Move.Payload,
 		},
-		Ply:       req.Ply,
 		Timestamp: req.Timestamp,
 	}
+	for _, playerState := range req.PlayerStates {
+		matchState.PlayerStates = append(matchState.PlayerStates, playerState)
+	}
+	return matchState
 }
 
 func MatchStateResponseFromEntitiy(matchState entities.MatchState) MatchStateResponse {
-	return MatchStateResponse{
-		Id:      matchState.Id,
-		MatchId: matchState.MatchId,
-		PlayerStates: []PlayerStateResponse{
-			{
-				Clock:  matchState.PlayerStates[0].Clock,
-				Status: matchState.PlayerStates[0].Status,
-			},
-			{
-				Clock:  matchState.PlayerStates[1].Clock,
-				Status: matchState.PlayerStates[1].Status,
-			},
-		},
+	resp := MatchStateResponse{
+		Id:        matchState.Id,
+		MatchId:   matchState.MatchId,
 		GameState: matchState.GameState,
 		Move: MoveResponse{
 			PlayerId: matchState.Move.PlayerId,
-			Uci:      matchState.Move.Uci,
+			Payload:  matchState.Move.Payload,
 		},
-		Ply:       matchState.Ply,
 		Timestamp: matchState.Timestamp,
 	}
+	for _, playerState := range matchState.PlayerStates {
+		resp.PlayerStates = append(resp.PlayerStates, playerState)
+	}
+	return resp
 }
 
 func MatchStateListResponseFromEntities(matchStates []entities.MatchState) MatchStateListResponse {

@@ -64,7 +64,14 @@ func handler(
 			StatusCode: http.StatusBadRequest,
 		}, fmt.Errorf("failed to get active match: %w", err)
 	}
-	if activeMatch.Player1.Id != userId && activeMatch.Player2.Id != userId {
+
+	exist := false
+	for _, player := range activeMatch.Players {
+		if player.Id == userId {
+			exist = true
+		}
+	}
+	if !exist {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusBadRequest,
 		}, fmt.Errorf("failed to restore match: %w", ErrUserNotInMatch)

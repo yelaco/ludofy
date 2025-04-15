@@ -169,8 +169,7 @@ func handler(
 	for _, opponentId := range opponentIds {
 		match, err := createMatch(
 			ctx,
-			userRating,
-			opponentId,
+			[]string{userId, opponentId},
 			ticket.GameMode,
 			serverIp,
 		)
@@ -235,8 +234,7 @@ func findOpponents(
 
 func createMatch(
 	ctx context.Context,
-	userRating entities.UserRating,
-	opponentId,
+	playerIds []string,
 	gameMode string,
 	serverIp string,
 ) (
@@ -252,80 +250,38 @@ func createMatch(
 		CreatedAt:      time.Now(),
 	}
 
-	// Associate the players with created match to kind of mark them as matched
-	err := storageClient.PutUserMatch(ctx, entities.UserMatch{
-		UserId:  opponentId,
-		MatchId: match.MatchId,
-	})
-	if err != nil {
-		return entities.ActiveMatch{}, err
-	}
+	for _, playerId := range playerIds {
+		match.Players = append(match.Players, entities.Player{
+			Id: playerId,
+		})
+		// Associate the players with created match to kind of mark them as matched
+		err := storageClient.PutUserMatch(ctx, entities.UserMatch{
+			UserId:  playerId,
+			MatchId: match.MatchId,
+		})
+		if err != nil {
+			return entities.ActiveMatch{}, err
+		}
 
-	err = storageClient.PutUserMatch(ctx, entities.UserMatch{
-		UserId:  userRating.UserId,
-		MatchId: match.MatchId,
-	})
-	if err != nil {
-		return entities.ActiveMatch{}, err
+		// Match created, remove opponent ticket from the queue
+		err = storageClient.DeleteMatchmakingTickets(ctx, playerId)
+		if err != nil {
+			return entities.ActiveMatch{},
+				fmt.Errorf(
+					"failed to delete matchmaking ticket: [userId: %s] %w",
+					playerId,
+					err,
+				)
+		}
 	}
-
-	// Pre-calculate players' rating in each possible outcome
-	opponentRating, err := storageClient.GetUserRating(ctx, opponentId)
-	if err != nil {
-		return entities.ActiveMatch{},
-			fmt.Errorf("failed to get user rating: %w", err)
-	}
-
-	newUserRatings, newUserRDs, err := calculateNewRatings(
-		ctx,
-		userRating,
-		opponentRating,
-	)
-	if err != nil {
-		return entities.ActiveMatch{}, err
-	}
-
-	newOpponentRatings, newOpponentRatingsRDs, err := calculateNewRatings(
-		ctx,
-		opponentRating,
-		userRating,
-	)
-	if err != nil {
-		return entities.ActiveMatch{}, err
-	}
-
-	match.Player1 = entities.Player{
-		Id:         userRating.UserId,
-		Rating:     userRating.Rating,
-		RD:         userRating.RD,
-		NewRatings: newUserRatings,
-		NewRDs:     newUserRDs,
-	}
-	match.Player2 = entities.Player{
-		Id:         opponentRating.UserId,
-		Rating:     opponentRating.Rating,
-		RD:         opponentRating.RD,
-		NewRatings: newOpponentRatings,
-		NewRDs:     newOpponentRatingsRDs,
-	}
-	match.AverageRating = (match.Player1.Rating + match.Player2.Rating) / 2
 
 	// Save match information
-	storageClient.PutActiveMatch(ctx, match)
-
-	// Match created, remove opponent ticket from the queue
-	err = storageClient.DeleteMatchmakingTickets(ctx, opponentId)
-	if err != nil {
-		return entities.ActiveMatch{},
-			fmt.Errorf(
-				"failed to delete matchmaking ticket: [userId: %s] %w",
-				opponentId,
-				err,
-			)
+	if err := storageClient.PutActiveMatch(ctx, match); err != nil {
+		return entities.ActiveMatch{}, fmt.Errorf("failed to put active match: %w", err)
 	}
 
 	// Create a conversation for spectators
-	err = storageClient.PutSpectatorConversation(
+	err := storageClient.PutSpectatorConversation(
 		ctx,
 		entities.SpectatorConversation{
 			MatchId:        match.MatchId,
@@ -333,7 +289,7 @@ func createMatch(
 		},
 	)
 	if err != nil {
-		return entities.ActiveMatch{}, err
+		return entities.ActiveMatch{}, fmt.Errorf("failed to put spectator conversation: %w", err)
 	}
 
 	return match, nil
