@@ -12,7 +12,43 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type Server struct {
+// Interfaces
+type Server interface {
+	Start() error
+	HandleMessage(playerId string, match Match, msg []byte)
+	HandleMatchEnd(match Match)
+	HandleMatchSave(match Match)
+	HandleMatchAbort(match Match)
+}
+
+type Match interface {
+	start()
+	setHandler(MatchHandler)
+	setSaveCallback(func(Match))
+	setEndCallback(func(Match))
+	setAbortCallback(func(Match))
+	playerJoin(playerId string, conn *websocket.Conn)
+	playerDisconnect(playerId string)
+	GetId() string
+	GetPlayers() map[string]Player
+	GetStartedAt() time.Time
+	Abort()
+	Save()
+	End()
+	ProcessMove(move Move)
+	GetPlayerWithId(id string) (Player, bool)
+}
+
+type Player interface {
+	setConn(conn *websocket.Conn)
+	GetId() string
+	GetStatus() string
+	WriteJson(msg interface{}) error
+	WriteControl(messageType int, data []byte, deadline time.Time) error
+}
+
+// Default implementations
+type DefaultServer struct {
 	address  string
 	upgrader websocket.Upgrader
 
@@ -26,33 +62,32 @@ type Server struct {
 	lambdaClient  *lambda.Client
 
 	protectionTimer *utils.Timer
-	Handler         ServerHandler
+	handler         ServerHandler
 }
 
-type Player struct {
-	Id       string
-	Conn     *websocket.Conn
-	MatchId  string
-	SendChan chan any
-	Status   Status
+type DefaultPlayer struct {
+	Id      string
+	Conn    *websocket.Conn
+	MatchId string
+	Status  Status
 
 	mu *sync.Mutex
 }
 
-type Match struct {
+type DefaultMatch struct {
 	Id        string
-	Players   map[string]*Player
-	MoveCh    chan Move
+	Players   map[string]Player
+	moveCh    chan Move
 	StartedAt time.Time
 
-	endCallback   func(*Match)
-	saveCallback  func(*Match)
-	abortCallback func(*Match)
+	endCallback   func(Match)
+	saveCallback  func(Match)
+	abortCallback func(Match)
 
 	ended bool
 	mu    *sync.Mutex
 
-	Handler MatchHandler
+	handler MatchHandler
 }
 
 type Move struct {

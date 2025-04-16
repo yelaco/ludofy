@@ -1,6 +1,7 @@
 package server
 
 import (
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -14,7 +15,17 @@ const (
 	DISCONNECTED
 )
 
-func (p *Player) setConn(conn *websocket.Conn) {
+func NewDefaultPlayer(playerId, matchId string) Player {
+	return &DefaultPlayer{
+		Id:      playerId,
+		Conn:    nil,
+		MatchId: matchId,
+		Status:  INIT,
+		mu:      new(sync.Mutex),
+	}
+}
+
+func (p *DefaultPlayer) setConn(conn *websocket.Conn) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if conn == nil {
@@ -38,7 +49,15 @@ func (s Status) String() string {
 	}
 }
 
-func (p *Player) WriteJson(msg interface{}) error {
+func (p *DefaultPlayer) GetId() string {
+	return p.Id
+}
+
+func (p *DefaultPlayer) GetStatus() string {
+	return p.Status.String()
+}
+
+func (p *DefaultPlayer) WriteJson(msg interface{}) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p == nil || p.Conn == nil {
@@ -47,7 +66,7 @@ func (p *Player) WriteJson(msg interface{}) error {
 	return p.Conn.WriteJSON(msg)
 }
 
-func (p *Player) WriteControl(messageType int, data []byte, deadline time.Time) error {
+func (p *DefaultPlayer) WriteControl(messageType int, data []byte, deadline time.Time) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p == nil || p.Conn == nil {

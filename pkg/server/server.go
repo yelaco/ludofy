@@ -29,8 +29,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewFromConfig(cfg Config) *Server {
-	srv := &Server{
+func NewFromConfig(cfg Config) Server {
+	srv := &DefaultServer{
 		address: "0.0.0.0:" + cfg.Port,
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
@@ -49,14 +49,14 @@ func NewFromConfig(cfg Config) *Server {
 			nil,
 		),
 		lambdaClient: lambda.NewFromConfig(cfg.awsCfg),
-		Handler:      cfg.ServerHandler,
+		handler:      cfg.ServerHandler,
 	}
 	srv.resetProtectionTimer(cfg.protectionTimeout)
 	return srv
 }
 
 // Start method    starts the game server
-func (s *Server) Start() error {
+func (s *DefaultServer) Start() error {
 	// Server status
 	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
 		count := s.totalMatches.Load()
@@ -135,25 +135,25 @@ func (s *Server) Start() error {
 	return http.ListenAndServe(s.address, nil)
 }
 
-func (s *Server) HandleMessage(playerId string, match *Match, msg []byte) {
+func (s *DefaultServer) HandleMessage(playerId string, match Match, msg []byte) {
 	if match == nil {
 		logging.Error("match not loaded")
 		return
 	}
-	s.Handler.OnHandleMessage(playerId, match, msg)
+	s.handler.OnHandleMessage(playerId, match, msg)
 }
 
-func (s *Server) HandleMatchEnd(match *Match) {
+func (s *DefaultServer) HandleMatchEnd(match Match) {
 	if match == nil {
 		return
 	}
 	matchRecordReq := dtos.MatchRecordRequest{
-		MatchId:   match.Id,
-		StartedAt: match.StartedAt,
+		MatchId:   match.GetId(),
+		StartedAt: match.GetStartedAt(),
 		EndedAt:   time.Now(),
 	}
 
-	if err := s.Handler.OnHandleMatchEnd(&matchRecordReq, match); err != nil {
+	if err := s.handler.OnHandleMatchEnd(&matchRecordReq, match); err != nil {
 		logging.Fatal("failed to hanlde match end", zap.Error(err))
 	}
 
@@ -172,18 +172,18 @@ func (s *Server) HandleMatchEnd(match *Match) {
 		logging.Error("failed to invoke end game", zap.Error(err))
 	}
 
-	s.removeMatch(match.Id)
-	logging.Info("match ended", zap.String("match_id", match.Id))
+	s.removeMatch(match.GetId())
+	logging.Info("match ended", zap.String("match_id", match.GetId()))
 }
 
-func (s *Server) HandleMatchSave(match *Match) {
+func (s *DefaultServer) HandleMatchSave(match Match) {
 	ctx := context.Background()
 	matchStateReq := dtos.MatchStateRequest{
 		Id:        utils.GenerateUUID(),
-		MatchId:   match.Id,
+		MatchId:   match.GetId(),
 		Timestamp: time.Now(),
 	}
-	s.Handler.OnHandleMatchSave(&matchStateReq, match)
+	s.handler.OnHandleMatchSave(&matchStateReq, match)
 
 	matchStateAppSyncReq := dtos.NewMatchStateAppSyncRequest(matchStateReq)
 	payload, err := json.Marshal(matchStateAppSyncReq)
@@ -244,7 +244,7 @@ func (s *Server) HandleMatchSave(match *Match) {
 	}
 }
 
-func (s *Server) HandleMatchAbort(match *Match) {
+func (s *DefaultServer) HandleMatchAbort(match Match) {
 	if match == nil {
 		return
 	}
@@ -256,8 +256,8 @@ func (s *Server) HandleMatchAbort(match *Match) {
 	lambdaClient := lambda.NewFromConfig(cfg)
 
 	matchAbortReq := dtos.MatchAbortRequest{
-		MatchId:   match.Id,
-		PlayerIds: make([]string, 0, len(match.Players)),
+		MatchId:   match.GetId(),
+		PlayerIds: make([]string, 0, len(match.GetPlayers())),
 	}
 
 	payload, err := json.Marshal(matchAbortReq)
@@ -277,12 +277,12 @@ func (s *Server) HandleMatchAbort(match *Match) {
 		logging.Fatal("failed to invoke abort game", zap.Error(err))
 	}
 
-	s.removeMatch(match.Id)
-	logging.Info("match aborted", zap.String("match_id", match.Id))
+	s.removeMatch(match.GetId())
+	logging.Info("match aborted", zap.String("match_id", match.GetId()))
 }
 
 // auth method    authenticates and extract userId
-func (s *Server) auth(r *http.Request) (string, error) {
+func (s *DefaultServer) auth(r *http.Request) (string, error) {
 	token := r.Header.Get("Authorization")
 	if token == "" {
 		return "", fmt.Errorf("no authorization")
@@ -306,7 +306,7 @@ func (s *Server) auth(r *http.Request) (string, error) {
 	return userId, nil
 }
 
-func (s *Server) loadMatch(matchId string) (*Match, error) {
+func (s *DefaultServer) loadMatch(matchId string) (Match, error) {
 	ctx := context.Background()
 
 	activeMatch, err := s.storageClient.GetActiveMatch(ctx, matchId)
@@ -319,7 +319,7 @@ func (s *Server) loadMatch(matchId string) (*Match, error) {
 
 	value, loaded := s.matches.Load(matchId)
 	if loaded {
-		match, ok := value.(*Match)
+		match, ok := value.(*DefaultMatch)
 		if ok {
 			logging.Info("match loaded")
 			return match, nil
@@ -337,22 +337,23 @@ func (s *Server) loadMatch(matchId string) (*Match, error) {
 			return nil, fmt.Errorf("failed to fetch match states: %w", err)
 		}
 
-		var match *Match
+		var match Match
 		if len(matchStates) > 0 {
-			match, err = s.Handler.OnMatchResume(activeMatch, matchStates[0])
+			match, err = s.handler.OnMatchResume(activeMatch, matchStates[0])
 			if err != nil {
 				return nil, fmt.Errorf("failed to resume match: %w", err)
 			}
 		} else {
-			match, err = s.Handler.OnMatchCreate(activeMatch)
+			match, err = s.handler.OnMatchCreate(activeMatch)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create match: %w", err)
 			}
 		}
 
-		match.saveCallback = s.HandleMatchSave
-		match.endCallback = s.HandleMatchEnd
-		match.abortCallback = s.HandleMatchAbort
+		match.setHandler(s.cfg.MatchHandler)
+		match.setSaveCallback(s.HandleMatchSave)
+		match.setEndCallback(s.HandleMatchEnd)
+		match.setAbortCallback(s.HandleMatchAbort)
 		s.matches.Store(matchId, match)
 		s.totalMatches.Add(1)
 		s.resetProtectionTimer(45 * time.Minute)
@@ -363,7 +364,7 @@ func (s *Server) loadMatch(matchId string) (*Match, error) {
 	}
 }
 
-func (s *Server) removeMatch(matchId string) {
+func (s *DefaultServer) removeMatch(matchId string) {
 	s.matches.Delete(matchId)
 	total := s.totalMatches.Add(-1)
 	if total <= 0 {
@@ -372,7 +373,7 @@ func (s *Server) removeMatch(matchId string) {
 	logging.Info("match removed", zap.Int32("total_matches", total))
 }
 
-func (s *Server) skipProtectionTimer() {
+func (s *DefaultServer) skipProtectionTimer() {
 	if s.protectionTimer == nil {
 		return
 	}
@@ -380,7 +381,7 @@ func (s *Server) skipProtectionTimer() {
 	logging.Info("server protection timer skipped")
 }
 
-func (s *Server) enableProtection() {
+func (s *DefaultServer) enableProtection() {
 	err := s.computeClient.UpdateServerProtection(context.TODO(), true)
 	if err != nil {
 		logging.Info("failed to enable server protection", zap.Error(err))
@@ -389,7 +390,7 @@ func (s *Server) enableProtection() {
 	logging.Info("server protection enabled")
 }
 
-func (s *Server) disableProtection() {
+func (s *DefaultServer) disableProtection() {
 	err := s.computeClient.UpdateServerProtection(context.TODO(), false)
 	if err != nil {
 		logging.Info("failed to disable server protection", zap.Error(err))
@@ -398,7 +399,7 @@ func (s *Server) disableProtection() {
 	logging.Info("server protection disabled")
 }
 
-func (s *Server) resetProtectionTimer(duration time.Duration) {
+func (s *DefaultServer) resetProtectionTimer(duration time.Duration) {
 	if s.protectionTimer != nil {
 		if s.protectionTimer.TimeRemaining() < duration {
 			s.protectionTimer.Reset(duration)
