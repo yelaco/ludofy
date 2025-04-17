@@ -11,6 +11,7 @@ Parameters:
     Default: dev
 
 Resources:
+  ### Auth ###
   UserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -29,8 +30,6 @@ Resources:
           AttributeDataType: String
           Required: true
           Mutable: true
-      LambdaConfig:
-        PostConfirmation: !GetAtt PostUserConfirmationFunction.Arn
 
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
@@ -48,3 +47,191 @@ Resources:
     Properties:
       Domain: !Sub "${StackName}-${DeploymentStage}"
       UserPoolId: !Ref UserPool
+
+  ### HTTP API Gateway ###
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: !Sub "${StackName}-http-api"
+      StageName: !Ref DeploymentStage
+      FailOnWarnings: true
+      CorsConfiguration:
+        AllowOrigins: ["*"]
+        AllowHeaders:
+          - Authorization
+          - Stripe-Signature
+        AllowMethods:
+          - GET
+          - POST
+          - DELETE
+      Auth:
+        Authorizers:
+          CognitoAuthorizer:
+            JwtConfiguration:
+              issuer: !Sub
+                - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}"
+                - UserPoolId: !Ref UserPool
+              audience:
+                - !Ref UserPoolClient
+            IdentitySource: "$request.header.Authorization"
+        DefaultAuthorizer: CognitoAuthorizer
+
+  PlatformGetFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-PlatformGet"
+      CodeUri: ./cmd/paas/platformGet/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Platforms
+      Environment:
+        Variables:
+          PLATFORMS_TABLE_NAME: !Ref Platforms
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /platform/{id}
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  PlatformListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-PlatformList"
+      CodeUri: ./cmd/paas/platformList/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Platforms
+      Environment:
+        Variables:
+          PLATFORMS_TABLE_NAME: !Ref Platforms
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /platforms
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  GameGetFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-GameGet"
+      CodeUri: ./cmd/paas/gameGet/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Games
+      Environment:
+        Variables:
+          PLATFORMS_TABLE_NAME: !Ref Games
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /game/{id}
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  GameListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-GameList"
+      CodeUri: ./cmd/paas/gameList/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Games
+      Environment:
+        Variables:
+          PLATFORMS_TABLE_NAME: !Ref Games
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /games
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  ### Storage ###
+  Platforms:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-Platforms"
+      AttributeDefinitions:
+        - AttributeName: Id
+          AttributeType: S
+        - AttributeName: UserId
+          AttributeType: S
+        - AttributeName: CreatedAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserIndex
+          KeySchema:
+            - AttributeName: UserId
+              KeyType: HASH
+            - AttributeName: CreatedAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  Games:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-Games"
+      AttributeDefinitions:
+        - AttributeName: Id
+          AttributeType: S
+        - AttributeName: PlatformId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: PlatformIndex
+          KeySchema:
+            - AttributeName: PlatformId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  Deployments:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-Deployments"
+      AttributeDefinitions:
+        - AttributeName: Id
+          AttributeType: S
+        - AttributeName: UserId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserIndex
+          KeySchema:
+            - AttributeName: UserId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST

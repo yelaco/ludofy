@@ -31,9 +31,9 @@ func handler(
 	error,
 ) {
 	auth.MustAuth(event.RequestContext.Authorizer)
-	platformId := event.PathParameters["id"]
+	gameId := event.PathParameters["id"]
 
-	platform, err := storageClient.GetPlatform(ctx, platformId)
+	game, err := storageClient.GetGame(ctx, gameId)
 	if err != nil {
 		if errors.Is(err, storage.ErrGameNotFound) {
 			return events.APIGatewayProxyResponse{
@@ -42,10 +42,10 @@ func handler(
 		}
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-		}, fmt.Errorf("failed to get platform: %w", err)
+		}, fmt.Errorf("failed to get game: %w", err)
 	}
 
-	resp := dtos.PlatformResponseFromEntity(platform)
+	resp := dtos.GameResponseFromEntity(game)
 	respJson, err := json.Marshal(resp)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
