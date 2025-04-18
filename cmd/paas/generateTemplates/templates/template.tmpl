@@ -1,0 +1,178 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Root Stack for Backend
+
+Parameters:
+  ServerImageUri:
+    Type: List<String>
+    Description: "URI of the Docker image for game server in ECR"
+  UserId:
+    Type: String
+  DeploymentStage:
+    Type: String
+    Default: dev
+
+Resources:
+  StorageStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/storage.yaml
+      Parameters:
+        StackName: !Ref AWS::StackName
+        DeploymentStage: !Ref DeploymentStage
+
+  AuthStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/auth.yaml
+      Parameters:
+        StackName: !Ref AWS::StackName
+        DeploymentStage: !Ref DeploymentStage
+    DependsOn: StorageStack
+
+  AppSyncStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/appsync.yaml
+      Parameters:
+        StackName: !Ref AWS::StackName
+        DeploymentStage: !Ref DeploymentStage
+    DependsOn:
+      - StorageStack
+      - AuthStack
+
+  ComputeStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/compute.yaml
+      Parameters:
+        StackName: !Ref AWS::StackName
+        DeploymentStage: !Ref DeploymentStage
+    DependsOn:
+      - StorageStack
+      - AuthStack
+      - AppSyncStack
+
+  WebsocketApiStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/websocketApi.yaml
+      Parameters:
+        StackName: !Ref AWS::StackName
+        DeploymentStage: !Ref DeploymentStage
+    DependsOn:
+      - StorageStack
+      - AuthStack
+      - ComputeStack
+
+  HttpApiStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/httpApi.yaml
+      Parameters:
+        StackName: !Ref AWS::StackName
+        DeploymentStage: !Ref DeploymentStage
+    DependsOn:
+      - StorageStack
+      - AuthStack
+      - AppSyncStack
+      - ComputeStack
+      - WebsocketApiStack
+
+  LogStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/log.yaml
+      Parameters:
+        StackName: !Ref AWS::StackName
+        DeploymentStage: !Ref DeploymentStage
+
+{{ range .Games }}
+  {{ .Name }}:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/game.yaml
+      Parameters:
+        StackName: {{ .Name }}
+        ServerImageUri: {{ . ServerImageUri }}
+        DeploymentStage: !Ref DeploymentStage
+{{ end }}
+
+Outputs:
+  AppSyncGraphQLApiUrl:
+    Description: AppSync GraphQL API endpoint URL
+    Value: !GetAtt AppSyncStack.Outputs.AppSyncGraphQLApiUrl
+
+  AppSyncRealtimeApiUrl:
+    Description: AppSync API real-time endpoint URL
+    Value: !GetAtt AppSyncStack.Outputs.AppSyncRealtimeApiUrl
+
+  WebsocketApiUrl:
+    Description: WebSocket API URL
+    Value: !GetAtt WebsocketApiStack.Outputs.WebsocketApiUrl
+
+  MatchmakingEndpointUrl:
+    Description: "Endpoint URL for matchmaking"
+    Value: !Sub "POST ${HttpApiStack.Outputs.HttpApiEndpoint}/matchmaking"
+
+  UserGetEndpointUrl:
+    Description: "Endpoint URL for get user information"
+    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/user"
+
+  MatchRecordGetEndpointUrl:
+    Description: "Endpoint URL for get a single match record"
+    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/match/{id}"
+
+  MatchStateListEndpointUrl:
+    Description: "Endpoint URL for get a list of match results"
+    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/match/{id}/states?limit=20&startKey=<START-KEY>&order=asc"
+
+  ActiveMatchListEndpointUrl:
+    Description: "Endpoint URL for get a list of active matches"
+    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/activeMatches?limit=5&startKey=<START-KEY>"
+
+{{- if .IncludeRankingService }}
+  UserRatingListEndpointUrl:
+    Description: "Endpoint URL for get a list of user ratings"
+    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/userRatings?limit=5&startKey=<START-KEY>"
+
+  MatchResultListEndpointUrl:
+    Description: "Endpoint URL for get a list of match results"
+    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/matchResults?limit=5&startKey=<START-KEY>"
+{{- end }}
+
+  AvatarUploadEndpointUrl:
+    Description: "Endpoint URL for uploading avatar"
+    Value: !Sub "POST ${HttpApiStack.Outputs.HttpApiEndpoint}/avatar/upload"
+
+  MatchRestoreEndpointUrl:
+    Description: "Endpoint URL for restoring a match"
+    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/match/{id}/restore"
+
+{{- if .IncludeMatchSpectatingService }}
+  MatchSpectateEndpointUrl:
+    Description: "Endpoint URL for spectating a match"
+    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/match/{id}/spectate"
+{{- end }}
+
+{{- if .IncludeFriendService }}
+  FriendshipGetEndpointUrl:
+    Description: "Endpoint URL for getting a friendship information"
+    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/friend/{id}"
+
+  FriendshipListEndpointUrl:
+    Description: "Endpoint URL for getting friendship list"
+    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/friends?limit=5&startKey=<START-KEY>"
+
+  FriendshipRemoveEndpointUrl:
+    Description: "Endpoint URL for removing a friendship"
+    Value: !Sub "DELETE ${HttpApiStack.Outputs.HttpApiEndpoint}/friend/{id}"
+
+  FriendshipRequestEndpointUrl:
+    Description: "Endpoint URL for requesting a friendship"
+    Value: !Sub "POST ${HttpApiStack.Outputs.HttpApiEndpoint}/friend/{id}/request"
+
+  FriendshipRespondEndpointUrl:
+    Description: "Endpoint URL for respond to a friendship request"
+    Value: !Sub "POST ${HttpApiStack.Outputs.HttpApiEndpoint}/friend/{id}/respond"
+{{- end }}

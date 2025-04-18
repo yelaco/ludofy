@@ -1,0 +1,571 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: HTTP API Stack for Slchess
+
+Globals:
+  Function:
+    Timeout: 5
+    MemorySize: 128
+    Architectures:
+      - arm64
+
+Parameters:
+  StackName:
+    Type: String
+  DeploymentStage:
+    Type: String
+    Default: dev
+
+Resources:
+  ### HTTP API Gateway ###
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: !Sub "${StackName}-http-api"
+      StageName: !Ref DeploymentStage
+      FailOnWarnings: true
+      CorsConfiguration:
+        AllowOrigins: ["*"]
+        AllowHeaders:
+          - Authorization
+          - Stripe-Signature
+        AllowMethods:
+          - GET
+          - POST
+          - DELETE
+      Auth:
+        Authorizers:
+          CognitoAuthorizer:
+            JwtConfiguration:
+              issuer: !Sub
+                - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}"
+                - UserPoolId: !ImportValue UserPoolId
+              audience:
+                - !ImportValue UserPoolClientId
+            IdentitySource: "$request.header.Authorization"
+        DefaultAuthorizer: CognitoAuthorizer
+
+  ### User Endpoints ###
+  MatchmakingFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-Matchmaking"
+      CodeUri: ../cmd/lambda/matchmaking/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Timeout: 60
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue ConnectionsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue MatchmakingTicketsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue UserMatchesTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue ActiveMatchesTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue UserRatingsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue MatchResultsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue SpectatorConversationsTableName
+        - EcsRunTaskPolicy:
+            TaskDefinition: !ImportValue ServerDefinitionArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "ecs:ListTasks"
+                - "ecs:DescribeTasks"
+                - "ecs:UpdateService"
+              Resource: "*"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "ec2:DescribeNetworkInterfaces"
+              Resource: "*"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "execute-api:ManageConnections"
+              Resource: !Sub
+                - "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApiId}/*"
+                - WebsocketApiId: !ImportValue WebsocketApiId
+      Environment:
+        Variables:
+          SERVER_CLUSTER_NAME: !ImportValue ServerClusterName
+          SERVER_SERVICE_NAME: !ImportValue ServerServiceName
+          WEBSOCKET_API_ID: !ImportValue WebsocketApiId
+          WEBSOCKET_API_STAGE: !Ref DeploymentStage
+          DEPLOYMENT_STAGE: !Ref DeploymentStage
+          CONNECTIONS_TABLE_NAME: !ImportValue ConnectionsTableName
+          MATCHMAKING_TICKETS_TABLE_NAME: !ImportValue MatchmakingTicketsTableName
+          USER_MATCHES_TABLE_NAME: !ImportValue UserMatchesTableName
+          ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
+          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
+          MATCH_RESULTS_TABLE_NAME: !ImportValue MatchResultsTableName
+          SPECTATOR_CONVERSATIONS_TABLE_NAME: !ImportValue SpectatorConversationsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /matchmaking
+            Method: POST
+            ApiId: !Ref HttpApi
+
+  UserGetFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-UserGet"
+      CodeUri: ../cmd/lambda/userGet/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue UserProfilesTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue UserRatingsTableName
+      Environment:
+        Variables:
+          USER_PROFILES_TABLE_NAME: !ImportValue UserProfilesTableName
+          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /user/{id}
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  MatchRecordGetFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-MatchRecordGet"
+      CodeUri: ../cmd/lambda/matchRecordGet/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue MatchRecordsTableName
+      Environment:
+        Variables:
+          MATCH_RECORDS_TABLE_NAME: !ImportValue MatchRecordsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /match/{id}
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  MatchResultListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-MatchResultList"
+      CodeUri: ../cmd/lambda/matchResultList/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue MatchResultsTableName
+      Environment:
+        Variables:
+          MATCH_RESULTS_TABLE_NAME: !ImportValue MatchResultsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /matchResults
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  MessageListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-MessageList"
+      CodeUri: ../cmd/lambda/messageList/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue MessagesTableName
+      Environment:
+        Variables:
+          MESSAGES_TABLE_NAME: !ImportValue MessagesTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /messages
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  MatchStateListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-MatchStateList"
+      CodeUri: ../cmd/lambda/matchStateList/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue MatchStatesTableName
+      Environment:
+        Variables:
+          MATCH_STATES_TABLE_NAME: !ImportValue MatchStatesTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /match/{id}/states
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  ActiveMatchListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-ActiveMatchList"
+      CodeUri: ../cmd/lambda/activeMatchList/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue ActiveMatchesTableName
+      Environment:
+        Variables:
+          ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /activeMatches
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  UserRatingListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-UserRatingList"
+      CodeUri: ../cmd/lambda/userRatingList/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue UserRatingsTableName
+      Environment:
+        Variables:
+          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /userRatings
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  MatchRestoreFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-MatchRestore"
+      CodeUri: ../cmd/lambda/matchRestore/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Timeout: 60
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue ActiveMatchesTableName
+        - EcsRunTaskPolicy:
+            TaskDefinition: !ImportValue ServerDefinitionArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "ecs:ListTasks"
+                - "ecs:DescribeTasks"
+                - "ecs:UpdateService"
+              Resource: "*"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "ec2:DescribeNetworkInterfaces"
+              Resource: "*"
+      Environment:
+        Variables:
+          ECS_CLUSTER_NAME: !ImportValue ServerClusterName
+          ECS_SERVICE_NAME: !ImportValue ServerServiceName
+          ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /match/{id}/restore
+            Method: POST
+            ApiId: !Ref HttpApi
+
+  MatchSpectateFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-MatchSpectate"
+      CodeUri: ../cmd/lambda/matchSpectate/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue MatchStatesTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue SpectatorConversationsTableName
+      Environment:
+        Variables:
+          MATCH_STATES_TABLE_NAME: !ImportValue MatchStatesTableName
+          SPECTATOR_CONVERSATIONS_TABLE_NAME: !ImportValue SpectatorConversationsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /match/{id}/spectate
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  AvatarUploadFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-AvatarUpload"
+      CodeUri: ../cmd/lambda/avatarUpload/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !ImportValue ImagesBucketName
+      Environment:
+        Variables:
+          IMAGE_BUCKET_NAME: !ImportValue ImagesBucketName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /avatar/upload
+            Method: POST
+            ApiId: !Ref HttpApi
+
+{{- if .IncludeFriendService }}
+  FriendshipGetFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-FriendshipGet"
+      CodeUri: ../cmd/lambda/friendshipGet/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue FriendshipsTableName
+      Environment:
+        Variables:
+          FRIENDSHIPS_TABLE_NAME: !ImportValue FriendshipsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /friend/{id}
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  FriendshipListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-FriendshipList"
+      CodeUri: ../cmd/lambda/friendshipList/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue FriendshipsTableName
+      Environment:
+        Variables:
+          FRIENDSHIPS_TABLE_NAME: !ImportValue FriendshipsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /friends
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  FriendshipRemoveFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-FriendshipRemove"
+      CodeUri: ../cmd/lambda/friendshipRemove/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue FriendshipsTableName
+      Environment:
+        Variables:
+          FRIENDSHIPS_TABLE_NAME: !ImportValue FriendshipsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /friend/{id}
+            Method: DELETE
+            ApiId: !Ref HttpApi
+
+  FriendRequestReceivedListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-FriendRequestReceivedList"
+      CodeUri: ../cmd/lambda/friendRequestReceivedList/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue FriendRequestsTableName
+      Environment:
+        Variables:
+          FRIEND_REQUESTS_TABLE_NAME: !ImportValue FriendRequestsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /friendRequests/received
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  FriendRequestSentListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-FriendRequestSentList"
+      CodeUri: ../cmd/lambda/friendRequestSentList/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue FriendRequestsTableName
+      Environment:
+        Variables:
+          FRIEND_REQUESTS_TABLE_NAME: !ImportValue FriendRequestsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /friendRequests/sent
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  FriendRequestAddFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-FriendRequestAdd"
+      CodeUri: ../cmd/lambda/friendRequestAdd/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue FriendRequestsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue FriendshipsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue ApplicationEndpointsTableName
+        - SNSPublishMessagePolicy:
+            TopicName: "*"
+      Environment:
+        Variables:
+          FRIEND_REQUESTS_TABLE_NAME: !ImportValue FriendRequestsTableName
+          FRIENDSHIPS_TABLE_NAME: !ImportValue FriendshipsTableName
+          APPLICATION_ENDPOINTS_TABLE_NAME: !ImportValue ApplicationEndpointsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /friend/{id}/add
+            Method: POST
+            ApiId: !Ref HttpApi
+
+  FriendRequestAcceptFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-FriendRequestAccept"
+      CodeUri: ../cmd/lambda/friendRequestAccept/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue FriendRequestsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue FriendshipsTableName
+      Environment:
+        Variables:
+          FRIEND_REQUESTS_TABLE_NAME: !ImportValue FriendRequestsTableName
+          FRIENDSHIPS_TABLE_NAME: !ImportValue FriendshipsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /friend/{id}/accept
+            Method: POST
+            ApiId: !Ref HttpApi
+
+  FriendRequestRejectAcceptFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-FriendRequestReject"
+      CodeUri: ../cmd/lambda/friendRequestReject/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue FriendRequestsTableName
+      Environment:
+        Variables:
+          FRIEND_REQUESTS_TABLE_NAME: !ImportValue FriendRequestsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /friend/{id}/reject
+            Method: POST
+            ApiId: !Ref HttpApi
+{{- end }}
+
+Outputs:
+  HttpApiEndpoint:
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}"
+    Export:
+      Name: HttpApiEndpoint

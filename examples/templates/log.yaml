@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Logging Stack for Slchess
+
+Parameters:
+  StackName:
+    Type: String
+  DeploymentStage:
+    Type: String
+    Default: dev
+
+Resources:
+  ServerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${StackName}/${DeploymentStage}/ecs/server"
+      RetentionInDays: 7
+
+  QueuingFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${StackName}-${DeploymentStage}-Queuing"
+      RetentionInDays: 7

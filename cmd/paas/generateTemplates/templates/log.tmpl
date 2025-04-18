@@ -10,18 +10,6 @@ Parameters:
     Default: dev
 
 Resources:
-  ServerLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub "/${StackName}/${DeploymentStage}/ecs/server"
-      RetentionInDays: 7
-
-  StofinetLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub "/${StackName}/${DeploymentStage}/ecs/stofinet"
-      RetentionInDays: 7
-
   QueuingFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:

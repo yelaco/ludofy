@@ -17,23 +17,6 @@ Parameters:
     Default: dev
 
 Resources:
-  ### S3 ###
-  Puzzles:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub "${StackName}-${DeploymentStage}-puzzles"
-      CorsConfiguration:
-        CorsRules:
-          - AllowedOrigins:
-              - "*"
-            AllowedMethods:
-              - GET
-              - PUT
-              - POST
-              - DELETE
-            AllowedHeaders:
-              - "*"
-
   Images:
     Type: AWS::S3::Bucket
     Properties:
@@ -193,43 +176,6 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
-  PuzzleProfiles:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub "${StackName}-${DeploymentStage}-PuzzleProfiles"
-      AttributeDefinitions:
-        - AttributeName: UserId
-          AttributeType: S
-      KeySchema:
-        - AttributeName: UserId
-          KeyType: HASH
-      BillingMode: PAY_PER_REQUEST
-
-  UserRatings:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub "${StackName}-${DeploymentStage}-UserRatings"
-      AttributeDefinitions:
-        - AttributeName: UserId
-          AttributeType: S
-        - AttributeName: Rating
-          AttributeType: N
-        - AttributeName: PartitionKey # Static partition key for GSI
-          AttributeType: S
-      KeySchema:
-        - AttributeName: UserId
-          KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: RatingIndex
-          KeySchema:
-            - AttributeName: PartitionKey # Static key
-              KeyType: HASH
-            - AttributeName: Rating
-              KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
-      BillingMode: PAY_PER_REQUEST
-
   UserMatches:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -261,22 +207,11 @@ Resources:
       AttributeDefinitions:
         - AttributeName: MatchId
           AttributeType: S
-        - AttributeName: AverageRating
-          AttributeType: N
         - AttributeName: PartitionKey # Static partition key for GSI
           AttributeType: S
       KeySchema:
         - AttributeName: MatchId
           KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: AverageRatingIndex
-          KeySchema:
-            - AttributeName: PartitionKey
-              KeyType: HASH
-            - AttributeName: AverageRating
-              KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
   MatchStates:
@@ -288,8 +223,8 @@ Resources:
           AttributeType: S
         - AttributeName: MatchId
           AttributeType: S
-        - AttributeName: Ply
-          AttributeType: N
+        - AttributeName: Timestamp
+          AttributeType: S
       KeySchema:
         - AttributeName: Id
           KeyType: HASH
@@ -298,7 +233,7 @@ Resources:
           KeySchema:
             - AttributeName: MatchId
               KeyType: HASH
-            - AttributeName: Ply
+            - AttributeName: Timestamp
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
@@ -314,25 +249,6 @@ Resources:
       KeySchema:
         - AttributeName: MatchId
           KeyType: HASH
-      BillingMode: PAY_PER_REQUEST
-
-  MatchResults:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub "${StackName}-${DeploymentStage}-MatchResults"
-      AttributeDefinitions:
-        - AttributeName: UserId
-          AttributeType: S
-        - AttributeName: Timestamp
-          AttributeType: S
-      KeySchema:
-        - AttributeName: UserId
-          KeyType: HASH
-        - AttributeName: Timestamp
-          KeyType: RANGE
-      TimeToLiveSpecification:
-        AttributeName: TTL
-        Enabled: true
       BillingMode: PAY_PER_REQUEST
 
   Messages:
@@ -360,6 +276,53 @@ Resources:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
+{{- if .IncludeRankingService }}
+  MatchResults:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-MatchResults"
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+        - AttributeName: Timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+        - AttributeName: Timestamp
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: TTL
+        Enabled: true
+      BillingMode: PAY_PER_REQUEST
+
+  UserRatings:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-UserRatings"
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+        - AttributeName: Rating
+          AttributeType: N
+        - AttributeName: PartitionKey # Static partition key for GSI
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: RatingIndex
+          KeySchema:
+            - AttributeName: PartitionKey # Static key
+              KeyType: HASH
+            - AttributeName: Rating
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+{{- end }}
+
+{{- if .IncludeChatService }}
   SpectatorConversations:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -371,7 +334,9 @@ Resources:
         - AttributeName: MatchId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+{{- end }}
 
+{{- if .IncludeFriendService }}
   Friendships:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -419,37 +384,7 @@ Resources:
           Projection:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
-
-  Evaluations:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub "${StackName}-${DeploymentStage}-Evaluations"
-      AttributeDefinitions:
-        - AttributeName: Fen
-          AttributeType: S
-      KeySchema:
-        - AttributeName: Fen
-          KeyType: HASH
-      TimeToLiveSpecification:
-        AttributeName: TTL
-        Enabled: true
-      BillingMode: PAY_PER_REQUEST
-
-  ApplicationEndpoints:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub "${StackName}-${DeploymentStage}-ApplicationEndpoints"
-      AttributeDefinitions:
-        - AttributeName: UserId
-          AttributeType: S
-        - AttributeName: DeviceToken
-          AttributeType: S
-      KeySchema:
-        - AttributeName: UserId
-          KeyType: HASH
-        - AttributeName: DeviceToken
-          KeyType: RANGE
-      BillingMode: PAY_PER_REQUEST
+{{- end }}
 
 Outputs:
   ConnectionsTableName:
@@ -461,16 +396,6 @@ Outputs:
     Value: !Ref UserProfiles
     Export:
       Name: UserProfilesTableName
-
-  PuzzleProfilesTableName:
-    Value: !Ref PuzzleProfiles
-    Export:
-      Name: PuzzleProfilesTableName
-
-  UserRatingsTableName:
-    Value: !Ref UserRatings
-    Export:
-      Name: UserRatingsTableName
 
   UserMatchesTableName:
     Value: !Ref UserMatches
@@ -492,31 +417,46 @@ Outputs:
     Export:
       Name: MatchmakingTicketsTableName
 
+{{- if .IncludeChatService }}
   MessagesTableName:
     Value: !Ref Messages
     Export:
       Name: MessagesTableName
-
-  MatchRecordsTableName:
-    Value: !Ref MatchRecords
-    Export:
-      Name: MatchRecordsTableName
-
-  MatchResultsTableName:
-    Value: !Ref MatchResults
-    Export:
-      Name: MatchResultsTableName
 
   SpectatorConversationsTableName:
     Value: !Ref SpectatorConversations
     Export:
       Name: SpectatorConversationsTableName
 
-  EvaluationsTableName:
-    Value: !Ref Evaluations
+  SpectatorConversationsTableArn:
+    Value: !GetAtt SpectatorConversations.Arn
     Export:
-      Name: EvaluationsTableName
+      Name: SpectatorConversationsTableArn
 
+  MessagesTableArn:
+    Value: !GetAtt Messages.Arn
+    Export:
+      Name: MessagesTableArn
+{{- end }}
+
+  MatchRecordsTableName:
+    Value: !Ref MatchRecords
+    Export:
+      Name: MatchRecordsTableName
+
+{{- if .IncludeRankingService }}
+  MatchResultsTableName:
+    Value: !Ref MatchResults
+    Export:
+      Name: MatchResultsTableName
+
+  UserRatingsTableName:
+    Value: !Ref UserRatings
+    Export:
+      Name: UserRatingsTableName
+{{- end }}
+
+{{- if .IncludeFriendService }}
   FriendshipsTableName:
     Value: !Ref Friendships
     Export:
@@ -526,16 +466,7 @@ Outputs:
     Value: !Ref FriendRequests
     Export:
       Name: FriendRequestsTableName
-
-  ApplicationEndpointsTableName:
-    Value: !Ref ApplicationEndpoints
-    Export:
-      Name: ApplicationEndpointsTableName
-
-  PuzzlesBucketName:
-    Value: !Ref Puzzles
-    Export:
-      Name: PuzzlesBucketName
+{{- end }}
 
   ImagesBucketName:
     Value: !Ref Images
@@ -561,13 +492,3 @@ Outputs:
     Value: !GetAtt UserMatches.Arn
     Export:
       Name: UserMatchesTableArn
-
-  SpectatorConversationsTableArn:
-    Value: !GetAtt SpectatorConversations.Arn
-    Export:
-      Name: SpectatorConversationsTableArn
-
-  MessagesTableArn:
-    Value: !GetAtt Messages.Arn
-    Export:
-      Name: MessagesTableArn

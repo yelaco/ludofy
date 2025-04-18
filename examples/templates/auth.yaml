@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Authentication Stack for Slchess
+
+Globals:
+  Function:
+    Timeout: 10
+    MemorySize: 128
+    Architectures:
+      - arm64
+
+Parameters:
+  StackName:
+    Type: String
+  DeploymentStage:
+    Type: String
+    Default: dev
+
+Resources:
+  ### Cognito User Pool ###
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${StackName}-${DeploymentStage}-UserPool"
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          RequireUppercase: true
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: true
+      LambdaConfig:
+        PostConfirmation: !GetAtt PostUserConfirmationFunction.Arn
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "${StackName}-${DeploymentStage}-UserPoolClient"
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub "${StackName}-${DeploymentStage}"
+      UserPoolId: !Ref UserPool
+
+  ### Post-Confirmation Lambda ###
+  PostUserConfirmationFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-PostUserConfirmation"
+      CodeUri: ../cmd/lambda/postUserConfirmation/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue UserProfilesTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue UserRatingsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue PuzzleProfilesTableName
+      Environment:
+        Variables:
+          USER_PROFILES_TABLE_NAME: !ImportValue UserProfilesTableName
+          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
+          PUZZLE_PROFILES_TABLE_NAME: !ImportValue PuzzleProfilesTableName
+
+  PostUserConfirmationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PostUserConfirmationFunction
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt UserPool.Arn
+
+Outputs:
+  UserPoolId:
+    Value: !Ref UserPool
+    Export:
+      Name: UserPoolId
+
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
+    Export:
+      Name: UserPoolClientId

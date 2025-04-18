@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: WebSocket Stack for Slchess
+Description: WebSocket Stack
 
 Globals:
   Function:
-    Timeout: 5
+    Timeout: 10
     MemorySize: 128
     Architectures:
       - arm64
@@ -33,9 +33,8 @@ Resources:
       - ConnectRoute
       - DisconnectRoute
       - QueuingRoute
-      - EvaluateRoute
 
-  SlchessWebsocketApiStage:
+  WebsocketApiStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
       ApiId: !Ref WebsocketApi
@@ -176,74 +175,6 @@ Resources:
       FunctionName: !Ref QueuingFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApi}/*/queuing"
-
-  ### Evaluation ###
-  EvaluateRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref WebsocketApi
-      RouteKey: evaluate
-      AuthorizationType: NONE
-      Target: !Sub "integrations/${EvaluateIntegration}"
-
-  EvaluateIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref WebsocketApi
-      IntegrationType: AWS_PROXY
-      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EvaluateFunction.Arn}/invocations"
-
-  EvaluateFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: !Sub "${StackName}-${DeploymentStage}-Evaluate"
-      CodeUri: ../cmd/lambda/evaluate/
-      Handler: bootstrap
-      Runtime: provided.al2023
-      Timeout: 30
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !ImportValue EvaluationsTableName
-        - SQSSendMessagePolicy:
-            QueueName: !ImportValue EvaluationRequestQueueName
-        - Statement:
-            - Effect: Allow
-              Action:
-                - "execute-api:ManageConnections"
-              Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApi}/*"
-        - EcsRunTaskPolicy:
-            TaskDefinition: !ImportValue StofinetDefinitionArn
-        - Statement:
-            - Effect: Allow
-              Action:
-                - "ecs:ListTasks"
-                - "ecs:DescribeTasks"
-                - "ecs:UpdateService"
-              Resource: "*"
-        - Statement:
-            - Effect: Allow
-              Action:
-                - "ec2:DescribeNetworkInterfaces"
-              Resource: "*"
-
-      Environment:
-        Variables:
-          WEBSOCKET_API_ID: !Ref WebsocketApi
-          WEBSOCKET_API_STAGE: !Ref DeploymentStage
-          EVALUATION_REQUEST_QUEUE_URL: !ImportValue EvaluationRequestQueueUrl
-          EVALUATIONS_TABLE_NAME: !ImportValue EvaluationsTableName
-          STOFINET_CLUSTER_NAME: !ImportValue StofinetClusterName
-          STOFINET_SERVICE_NAME: !ImportValue StofinetServiceName
-
-  EvaluateFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !Ref EvaluateFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApi}/*/evaluate"
 
   ### IAM Role ###
   ApiGatewayRole:
