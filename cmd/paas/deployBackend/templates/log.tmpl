@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Authentication Stack for Slchess
+Description: Logging Stack for Slchess
 
 Parameters:
   StackName:
@@ -10,6 +10,12 @@ Parameters:
     Default: dev
 
 Resources:
+  ServerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${StackName}/${DeploymentStage}/ecs/server"
+      RetentionInDays: 7
+
   QueuingFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:

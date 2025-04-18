@@ -35,6 +35,23 @@ Resources:
         AwsRegion: !Ref AWS::Region
       ServiceRoleArn: !GetAtt AppSyncRole.Arn
 
+  GetMatchStateResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      TypeName: Query
+      FieldName: getMatchState
+      DataSourceName: !GetAtt MatchStatesDataSource.Name
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "GetItem",
+          "key": {
+            "MatchId": { "S": "$context.arguments.matchId" }
+          }
+        }
+      ResponseMappingTemplate: "$util.toJson($context.result)"
+
   UpdateMatchStateResolver:
     Type: AWS::AppSync::Resolver
     Properties:
@@ -72,7 +89,6 @@ Resources:
           }
         }
       ResponseMappingTemplate: "$util.toJson($context.result)"
-
 
 {{- if .IncludeChatService }}
   MessagesDataSource:

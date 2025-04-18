@@ -4,7 +4,7 @@ Description: Authentication Stack for Slchess
 
 Globals:
   Function:
-    Timeout: 5
+    Timeout: 10
     MemorySize: 128
     Architectures:
       - arm64
@@ -70,15 +70,18 @@ Resources:
         - AWSLambdaBasicExecutionRole
         - DynamoDBCrudPolicy:
             TableName: !ImportValue UserProfilesTableName
+{{- if .IncludeRankingService }}
         - DynamoDBCrudPolicy:
             TableName: !ImportValue UserRatingsTableName
+{{- end }}
         - DynamoDBCrudPolicy:
             TableName: !ImportValue PuzzleProfilesTableName
       Environment:
         Variables:
           USER_PROFILES_TABLE_NAME: !ImportValue UserProfilesTableName
+{{- if .IncludeRankingService }}
           USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
-          PUZZLE_PROFILES_TABLE_NAME: !ImportValue PuzzleProfilesTableName
+{{- end }}
 
   PostUserConfirmationPermission:
     Type: AWS::Lambda::Permission

@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Storage Stack for Slchess
+Description: Storage Stack
 
 Globals:
   Function:
-    Timeout: 5
+    Timeout: 10
     MemorySize: 128
     Architectures:
       - arm64
@@ -176,6 +176,52 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
+{{- if .IncludeRankingService }}
+  UserRatings:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-UserRatings"
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+        - AttributeName: Rating
+          AttributeType: N
+        - AttributeName: PartitionKey # Static partition key for GSI
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: RatingIndex
+          KeySchema:
+            - AttributeName: PartitionKey # Static key
+              KeyType: HASH
+            - AttributeName: Rating
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  MatchResults:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-MatchResults"
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+        - AttributeName: Timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+        - AttributeName: Timestamp
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: TTL
+        Enabled: true
+      BillingMode: PAY_PER_REQUEST
+{{- end }}
+
   UserMatches:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -207,11 +253,22 @@ Resources:
       AttributeDefinitions:
         - AttributeName: MatchId
           AttributeType: S
+        - AttributeName: AverageRating
+          AttributeType: N
         - AttributeName: PartitionKey # Static partition key for GSI
           AttributeType: S
       KeySchema:
         - AttributeName: MatchId
           KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: AverageRatingIndex
+          KeySchema:
+            - AttributeName: PartitionKey
+              KeyType: HASH
+            - AttributeName: AverageRating
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
   MatchStates:
@@ -223,8 +280,8 @@ Resources:
           AttributeType: S
         - AttributeName: MatchId
           AttributeType: S
-        - AttributeName: Timestamp
-          AttributeType: S
+        - AttributeName: Ply
+          AttributeType: N
       KeySchema:
         - AttributeName: Id
           KeyType: HASH
@@ -233,7 +290,7 @@ Resources:
           KeySchema:
             - AttributeName: MatchId
               KeyType: HASH
-            - AttributeName: Timestamp
+            - AttributeName: Ply
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
@@ -251,6 +308,7 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
+{{- if .IncludeChatService }}
   Messages:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -275,54 +333,9 @@ Resources:
           Projection:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
-
-{{- if .IncludeRankingService }}
-  MatchResults:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub "${StackName}-${DeploymentStage}-MatchResults"
-      AttributeDefinitions:
-        - AttributeName: UserId
-          AttributeType: S
-        - AttributeName: Timestamp
-          AttributeType: S
-      KeySchema:
-        - AttributeName: UserId
-          KeyType: HASH
-        - AttributeName: Timestamp
-          KeyType: RANGE
-      TimeToLiveSpecification:
-        AttributeName: TTL
-        Enabled: true
-      BillingMode: PAY_PER_REQUEST
-
-  UserRatings:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub "${StackName}-${DeploymentStage}-UserRatings"
-      AttributeDefinitions:
-        - AttributeName: UserId
-          AttributeType: S
-        - AttributeName: Rating
-          AttributeType: N
-        - AttributeName: PartitionKey # Static partition key for GSI
-          AttributeType: S
-      KeySchema:
-        - AttributeName: UserId
-          KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: RatingIndex
-          KeySchema:
-            - AttributeName: PartitionKey # Static key
-              KeyType: HASH
-            - AttributeName: Rating
-              KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
-      BillingMode: PAY_PER_REQUEST
 {{- end }}
 
-{{- if .IncludeChatService }}
+{{- if and .IncludeMatchSpectatingService .IncludeChatService }}
   SpectatorConversations:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -397,6 +410,18 @@ Outputs:
     Export:
       Name: UserProfilesTableName
 
+{{- if .IncludeRankingService }}
+  UserRatingsTableName:
+    Value: !Ref UserRatings
+    Export:
+      Name: UserRatingsTableName
+
+  MatchResultsTableName:
+    Value: !Ref MatchResults
+    Export:
+      Name: MatchResultsTableName
+{{- end }}
+
   UserMatchesTableName:
     Value: !Ref UserMatches
     Export:
@@ -423,16 +448,6 @@ Outputs:
     Export:
       Name: MessagesTableName
 
-  SpectatorConversationsTableName:
-    Value: !Ref SpectatorConversations
-    Export:
-      Name: SpectatorConversationsTableName
-
-  SpectatorConversationsTableArn:
-    Value: !GetAtt SpectatorConversations.Arn
-    Export:
-      Name: SpectatorConversationsTableArn
-
   MessagesTableArn:
     Value: !GetAtt Messages.Arn
     Export:
@@ -444,16 +459,16 @@ Outputs:
     Export:
       Name: MatchRecordsTableName
 
-{{- if .IncludeRankingService }}
-  MatchResultsTableName:
-    Value: !Ref MatchResults
+{{- if and .IncludeMatchSpectatingService .IncludeChatService }}
+  SpectatorConversationsTableName:
+    Value: !Ref SpectatorConversations
     Export:
-      Name: MatchResultsTableName
+      Name: SpectatorConversationsTableName
 
-  UserRatingsTableName:
-    Value: !Ref UserRatings
+  SpectatorConversationsTableArn:
+    Value: !GetAtt SpectatorConversations.Arn
     Export:
-      Name: UserRatingsTableName
+      Name: SpectatorConversationsTableArn
 {{- end }}
 
 {{- if .IncludeFriendService }}

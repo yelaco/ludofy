@@ -19,7 +19,7 @@ mkdir workspace
 cp -r repo/cmd repo/internal repo/pkg repo/go.* workspace/
 cd workspace
 
-aws s3 cp "s3://ludofy/$USER_ID/templates/" ./templates --recursive
+aws s3 cp "s3://ludofy/$USER_ID/$BACKEND_ID/templates/" ./templates --recursive
 
 # Build project
 sam build
@@ -30,6 +30,6 @@ sam deploy \
 	--region "$AWS_REGION" \
 	--parameter-overrides "ServerImageUri=$SERVER_IMAGE_URI" \
 	--s3-bucket "$S3_BUCKET" \
-	--s3-prefix "$USER_ID/deployment" \
+	--s3-prefix "$USER_ID/$BACKEND_ID/deployment" \
 	--capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
 	--no-confirm-changeset

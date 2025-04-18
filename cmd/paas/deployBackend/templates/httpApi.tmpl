@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: HTTP API Stack for Slchess
+Description: HTTP API Stack
 
 Globals:
   Function:
-    Timeout: 5
+    Timeout: 10
     MemorySize: 128
     Architectures:
       - arm64
@@ -65,12 +65,16 @@ Resources:
             TableName: !ImportValue UserMatchesTableName
         - DynamoDBCrudPolicy:
             TableName: !ImportValue ActiveMatchesTableName
+{{- if .IncludeRankingService }}
         - DynamoDBCrudPolicy:
             TableName: !ImportValue UserRatingsTableName
         - DynamoDBCrudPolicy:
             TableName: !ImportValue MatchResultsTableName
+{{- end }}
+{{- if and .IncludeMatchSpectatingService .IncludeChatService }}
         - DynamoDBCrudPolicy:
             TableName: !ImportValue SpectatorConversationsTableName
+{{- end }}
         - EcsRunTaskPolicy:
             TaskDefinition: !ImportValue ServerDefinitionArn
         - Statement:
@@ -103,9 +107,13 @@ Resources:
           MATCHMAKING_TICKETS_TABLE_NAME: !ImportValue MatchmakingTicketsTableName
           USER_MATCHES_TABLE_NAME: !ImportValue UserMatchesTableName
           ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
+{{- if .IncludeRankingService }}
           USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
           MATCH_RESULTS_TABLE_NAME: !ImportValue MatchResultsTableName
+{{- end }}
+{{- if and .IncludeMatchSpectatingService .IncludeChatService }}
           SPECTATOR_CONVERSATIONS_TABLE_NAME: !ImportValue SpectatorConversationsTableName
+{{- end }}
       Events:
         ApiEvent:
           Type: HttpApi
@@ -126,17 +134,21 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !ImportValue UserProfilesTableName
+{{- if .IncludeRankingService }}
         - DynamoDBCrudPolicy:
             TableName: !ImportValue UserRatingsTableName
+{{- end }}
       Environment:
         Variables:
           USER_PROFILES_TABLE_NAME: !ImportValue UserProfilesTableName
+{{- if .IncludeRankingService }}
           USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
+{{- end }}
       Events:
         ApiEvent:
           Type: HttpApi
           Properties:
-            Path: /user/{id}
+            Path: /user
             Method: GET
             ApiId: !Ref HttpApi
 
@@ -163,6 +175,30 @@ Resources:
             Method: GET
             ApiId: !Ref HttpApi
 
+{{- if .IncludeRankingService }}
+  UserRatingListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-UserRatingList"
+      CodeUri: ../cmd/lambda/userRatingList/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue UserRatingsTableName
+      Environment:
+        Variables:
+          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /userRatings
+            Method: GET
+            ApiId: !Ref HttpApi
+
   MatchResultListFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -185,7 +221,9 @@ Resources:
             Path: /matchResults
             Method: GET
             ApiId: !Ref HttpApi
+{{- end }}
 
+{{- if .IncludeChatService }}
   MessageListFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -208,6 +246,7 @@ Resources:
             Path: /messages
             Method: GET
             ApiId: !Ref HttpApi
+{{- end }}
 
   MatchStateListFunction:
     Type: AWS::Serverless::Function
@@ -255,29 +294,6 @@ Resources:
             Method: GET
             ApiId: !Ref HttpApi
 
-  UserRatingListFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: !Sub "${StackName}-${DeploymentStage}-UserRatingList"
-      CodeUri: ../cmd/lambda/userRatingList/
-      Handler: bootstrap
-      Runtime: provided.al2023
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserRatingsTableName
-      Environment:
-        Variables:
-          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /userRatings
-            Method: GET
-            ApiId: !Ref HttpApi
-
   MatchRestoreFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -318,6 +334,8 @@ Resources:
             Method: POST
             ApiId: !Ref HttpApi
 
+
+{{- if .IncludeMatchSpectatingService }}
   MatchSpectateFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -330,12 +348,16 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !ImportValue MatchStatesTableName
+{{- if .IncludeChatService }}
         - DynamoDBCrudPolicy:
             TableName: !ImportValue SpectatorConversationsTableName
+{{- end }}
       Environment:
         Variables:
           MATCH_STATES_TABLE_NAME: !ImportValue MatchStatesTableName
+{{- if .IncludeChatService }}
           SPECTATOR_CONVERSATIONS_TABLE_NAME: !ImportValue SpectatorConversationsTableName
+{{- end }}
       Events:
         ApiEvent:
           Type: HttpApi
@@ -343,6 +365,7 @@ Resources:
             Path: /match/{id}/spectate
             Method: GET
             ApiId: !Ref HttpApi
+{{- end }}
 
   AvatarUploadFunction:
     Type: AWS::Serverless::Function
