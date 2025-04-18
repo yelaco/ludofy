@@ -6,8 +6,6 @@ Parameters:
   ServerImageUri:
     Type: String
     Description: "URI of the Docker image for game server in ECR"
-  UserId:
-    Type: String
   DeploymentStage:
     Type: String
     Default: dev
@@ -16,7 +14,7 @@ Resources:
   StorageStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/storage.yaml
+      TemplateURL: ./templates/storage.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
@@ -24,7 +22,7 @@ Resources:
   AuthStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/auth.yaml
+      TemplateURL: ./templates/auth.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
@@ -33,7 +31,7 @@ Resources:
   AppSyncStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/appsync.yaml
+      TemplateURL: ./templates/appsync.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
@@ -44,7 +42,7 @@ Resources:
   ComputeStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/compute.yaml
+      TemplateURL: ./templates/compute.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         ServerImageUri: !Ref ServerImageUri
@@ -57,7 +55,7 @@ Resources:
   AnalysisStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/analysis.yaml
+      TemplateURL: ./templates/analysis.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
@@ -65,7 +63,7 @@ Resources:
   WebsocketApiStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/websocketApi.yaml
+      TemplateURL: ./templates/websocketApi.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
@@ -78,7 +76,7 @@ Resources:
   HttpApiStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/httpApi.yaml
+      TemplateURL: ./templates/httpApi.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
@@ -92,7 +90,7 @@ Resources:
   LogStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/log.yaml
+      TemplateURL: ./templates/log.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage

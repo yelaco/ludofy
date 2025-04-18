@@ -14,7 +14,12 @@ echo "Deploying stack: $STACK_NAME from branch: $GIT_BRANCH into environment: $E
 # Clone GitHub repo
 git clone --branch "$GIT_BRANCH" "$GIT_REPO" repo
 
-cd repo
+mkdir workspace
+
+cp -r repo/cmd repo/internal repo/pkg repo/go.* workspace/
+cd workspace
+
+aws s3 cp "s3://ludofy/$USER_ID/templates/" ./templates --recursive
 
 # Build project
 sam build
