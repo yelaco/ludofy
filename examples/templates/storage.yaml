@@ -4,7 +4,7 @@ Description: Storage Stack for Slchess
 
 Globals:
   Function:
-    Timeout: 5
+    Timeout: 10
     MemorySize: 128
     Architectures:
       - arm64

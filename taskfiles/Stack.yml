@@ -3,7 +3,7 @@ version: "3"
 env:
   AWS_SAM_DIR: .aws-sam
   BUILD_DIR: "{{.AWS_SAM_DIR}}/build"
-  STACK: slchess
+  STACK: ludofy
 
 includes:
   utils:
@@ -15,7 +15,7 @@ tasks:
   output:
     desc: Print stack output to json file
     cmds:
-      - sam list stack-outputs --stack-name slchess --output json
+      - sam list stack-outputs --stack-name ludofy --output json
 
   deploy:
     desc: Deploy the current local stack on AWS
@@ -25,7 +25,7 @@ tasks:
       - sam deploy
         --stack-name $STACK
         --region $AWS_REGION
-        --parameter-overrides "ServerImageUri=$SERVER_IMAGE_URI StofinetImageUri=$STOFINET_IMAGE_URI"
+        --parameter-overrides "DeployJobImageUri=$DEPLOY_JOB_IMAGE_URI"
         --confirm-changeset
         --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND
         --on-failure DELETE

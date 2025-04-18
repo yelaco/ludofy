@@ -20,7 +20,7 @@ var storageClient *storage.Client
 
 func init() {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
-	storageClient = storage.NewClient(dynamodb.NewFromConfig(cfg))
+	storageClient = storage.NewClient(dynamodb.NewFromConfig(cfg), nil)
 }
 
 func handler(
@@ -31,9 +31,9 @@ func handler(
 	error,
 ) {
 	auth.MustAuth(event.RequestContext.Authorizer)
-	gameId := event.PathParameters["id"]
+	platformId := event.PathParameters["id"]
 
-	game, err := storageClient.GetGame(ctx, gameId)
+	platform, err := storageClient.GetPlatform(ctx, platformId)
 	if err != nil {
 		if errors.Is(err, storage.ErrGameNotFound) {
 			return events.APIGatewayProxyResponse{
@@ -42,10 +42,10 @@ func handler(
 		}
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-		}, fmt.Errorf("failed to get game: %w", err)
+		}, fmt.Errorf("failed to get platform: %w", err)
 	}
 
-	resp := dtos.GameResponseFromEntity(game)
+	resp := dtos.PlatformResponseFromEntity(platform)
 	respJson, err := json.Marshal(resp)
 	if err != nil {
 		return events.APIGatewayProxyResponse{

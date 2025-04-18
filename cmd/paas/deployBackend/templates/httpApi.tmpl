@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: HTTP API Stack for Slchess
+Description: HTTP API Stack
 
 Globals:
   Function:
-    Timeout: 5
+    Timeout: 10
     MemorySize: 128
     Architectures:
       - arm64
@@ -65,12 +65,16 @@ Resources:
             TableName: !ImportValue UserMatchesTableName
         - DynamoDBCrudPolicy:
             TableName: !ImportValue ActiveMatchesTableName
+{{- if .IncludeRankingService }}
         - DynamoDBCrudPolicy:
             TableName: !ImportValue UserRatingsTableName
         - DynamoDBCrudPolicy:
             TableName: !ImportValue MatchResultsTableName
+{{- end }}
+{{- if and .IncludeMatchSpectatingService .IncludeChatService }}
         - DynamoDBCrudPolicy:
             TableName: !ImportValue SpectatorConversationsTableName
+{{- end }}
         - EcsRunTaskPolicy:
             TaskDefinition: !ImportValue ServerDefinitionArn
         - Statement:
@@ -103,9 +107,13 @@ Resources:
           MATCHMAKING_TICKETS_TABLE_NAME: !ImportValue MatchmakingTicketsTableName
           USER_MATCHES_TABLE_NAME: !ImportValue UserMatchesTableName
           ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
+{{- if .IncludeRankingService }}
           USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
           MATCH_RESULTS_TABLE_NAME: !ImportValue MatchResultsTableName
+{{- end }}
+{{- if and .IncludeMatchSpectatingService .IncludeChatService }}
           SPECTATOR_CONVERSATIONS_TABLE_NAME: !ImportValue SpectatorConversationsTableName
+{{- end }}
       Events:
         ApiEvent:
           Type: HttpApi
@@ -126,40 +134,21 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !ImportValue UserProfilesTableName
+{{- if .IncludeRankingService }}
         - DynamoDBCrudPolicy:
             TableName: !ImportValue UserRatingsTableName
+{{- end }}
       Environment:
         Variables:
           USER_PROFILES_TABLE_NAME: !ImportValue UserProfilesTableName
+{{- if .IncludeRankingService }}
           USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
+{{- end }}
       Events:
         ApiEvent:
           Type: HttpApi
           Properties:
-            Path: /user/{id}
-            Method: GET
-            ApiId: !Ref HttpApi
-
-  PuzzleProfileGetFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: !Sub "${StackName}-${DeploymentStage}-PuzzleProfileGet"
-      CodeUri: ../cmd/lambda/puzzleProfileGet/
-      Handler: bootstrap
-      Runtime: provided.al2023
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !ImportValue PuzzleProfilesTableName
-      Environment:
-        Variables:
-          PUZZLE_PROFILES_TABLE_NAME: !ImportValue PuzzleProfilesTableName
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /puzzle/profile
+            Path: /user
             Method: GET
             ApiId: !Ref HttpApi
 
@@ -186,6 +175,30 @@ Resources:
             Method: GET
             ApiId: !Ref HttpApi
 
+{{- if .IncludeRankingService }}
+  UserRatingListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-UserRatingList"
+      CodeUri: ../cmd/lambda/userRatingList/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue UserRatingsTableName
+      Environment:
+        Variables:
+          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /userRatings
+            Method: GET
+            ApiId: !Ref HttpApi
+
   MatchResultListFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -208,7 +221,9 @@ Resources:
             Path: /matchResults
             Method: GET
             ApiId: !Ref HttpApi
+{{- end }}
 
+{{- if .IncludeChatService }}
   MessageListFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -231,6 +246,7 @@ Resources:
             Path: /messages
             Method: GET
             ApiId: !Ref HttpApi
+{{- end }}
 
   MatchStateListFunction:
     Type: AWS::Serverless::Function
@@ -278,29 +294,6 @@ Resources:
             Method: GET
             ApiId: !Ref HttpApi
 
-  UserRatingListFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: !Sub "${StackName}-${DeploymentStage}-UserRatingList"
-      CodeUri: ../cmd/lambda/userRatingList/
-      Handler: bootstrap
-      Runtime: provided.al2023
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserRatingsTableName
-      Environment:
-        Variables:
-          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /userRatings
-            Method: GET
-            ApiId: !Ref HttpApi
-
   MatchRestoreFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -341,6 +334,8 @@ Resources:
             Method: POST
             ApiId: !Ref HttpApi
 
+
+{{- if .IncludeMatchSpectatingService }}
   MatchSpectateFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -353,12 +348,16 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !ImportValue MatchStatesTableName
+{{- if .IncludeChatService }}
         - DynamoDBCrudPolicy:
             TableName: !ImportValue SpectatorConversationsTableName
+{{- end }}
       Environment:
         Variables:
           MATCH_STATES_TABLE_NAME: !ImportValue MatchStatesTableName
+{{- if .IncludeChatService }}
           SPECTATOR_CONVERSATIONS_TABLE_NAME: !ImportValue SpectatorConversationsTableName
+{{- end }}
       Events:
         ApiEvent:
           Type: HttpApi
@@ -366,6 +365,7 @@ Resources:
             Path: /match/{id}/spectate
             Method: GET
             ApiId: !Ref HttpApi
+{{- end }}
 
   AvatarUploadFunction:
     Type: AWS::Serverless::Function
@@ -390,258 +390,7 @@ Resources:
             Method: POST
             ApiId: !Ref HttpApi
 
-  PuzzleGetFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: !Sub "${StackName}-${DeploymentStage}-PuzzleGet"
-      CodeUri: ../cmd/lambda/puzzleGet/
-      Handler: bootstrap
-      Runtime: provided.al2023
-      Timeout: 15
-      Policies:
-        - AthenaQueryPolicy:
-            WorkGroupName: primary
-        - S3CrudPolicy:
-            BucketName: !ImportValue PuzzlesBucketName
-        - S3CrudPolicy:
-            BucketName: !Ref AWS::StackName
-        - Statement:
-            - Effect: Allow
-              Action:
-                - s3:ListBucket
-              Resource: arn:aws:s3:::slchess
-            - Effect: Allow
-              Action:
-                - s3:GetObject
-                - s3:PutObject
-              Resource: arn:aws:s3:::slchess/*
-        - Statement:
-            - Effect: Allow
-              Action:
-                - glue:GetDatabase
-                - glue:GetTable
-                - glue:GetTables
-                - glue:GetPartition
-                - glue:GetPartitions
-              Resource: "*"
-      Environment:
-        Variables:
-          ATHENA_DATABASE_NAME: !Sub "${StackName}"
-          PUZZLES_TABLE_NAME: puzzles
-          PUZZLES_RESULT_LOCATION: !Sub
-            - "s3://${PuzzlesBucketName}/"
-            - PuzzlesBucketName: !ImportValue PuzzlesBucketName
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /puzzle/{id}
-            Method: GET
-            ApiId: !Ref HttpApi
-
-  PuzzleSolveFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: !Sub "${StackName}-${DeploymentStage}-PuzzleSolve"
-      CodeUri: ../cmd/lambda/puzzleSolve/
-      Handler: bootstrap
-      Runtime: provided.al2023
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !ImportValue PuzzleProfilesTableName
-      Environment:
-        Variables:
-          PUZZLE_PROFILES_TABLE_NAME: !ImportValue PuzzleProfilesTableName
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /puzzle/{id}/solved
-            Method: POST
-            ApiId: !Ref HttpApi
-
-  PuzzleListFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: !Sub "${StackName}-${DeploymentStage}-PuzzleList"
-      CodeUri: ../cmd/lambda/puzzleList/
-      Handler: bootstrap
-      Runtime: provided.al2023
-      Timeout: 60
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !ImportValue PuzzleProfilesTableName
-        - AthenaQueryPolicy:
-            WorkGroupName: primary
-        - S3CrudPolicy:
-            BucketName: !ImportValue PuzzlesBucketName
-        - S3CrudPolicy:
-            BucketName: !Ref AWS::StackName
-        - Statement:
-            - Effect: Allow
-              Action:
-                - s3:ListBucket
-              Resource: arn:aws:s3:::slchess
-            - Effect: Allow
-              Action:
-                - s3:GetObject
-                - s3:PutObject
-              Resource: arn:aws:s3:::slchess/*
-        - Statement:
-            - Effect: Allow
-              Action:
-                - glue:GetDatabase
-                - glue:GetTable
-                - glue:GetTables
-                - glue:GetPartition
-                - glue:GetPartitions
-              Resource: "*"
-      Environment:
-        Variables:
-          PUZZLE_PROFILES_TABLE_NAME: !ImportValue PuzzleProfilesTableName
-          ATHENA_DATABASE_NAME: !Sub "${StackName}"
-          PUZZLES_TABLE_NAME: puzzles
-          PUZZLES_RESULT_LOCATION: !Sub
-            - "s3://${PuzzlesBucketName}/"
-            - PuzzlesBucketName: !ImportValue PuzzlesBucketName
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /puzzles
-            Method: GET
-            ApiId: !Ref HttpApi
-
-  CreateCheckoutSessionFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: !Sub "${StackName}-${DeploymentStage}-CreateCheckoutSession"
-      CodeUri: ../cmd/lambda/createCheckoutSession/
-      Handler: bootstrap
-      Runtime: provided.al2023
-      Policies:
-        - Statement:
-            Effect: Allow
-            Action:
-              - ssm:GetParameter
-            Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/slchess/payment/stripe/secret-key-${DeploymentStage}"
-      Environment:
-        Variables:
-          STRIPE_SECRET_KEY: !Sub "{{resolve:ssm:/slchess/payment/stripe/secret-key-${DeploymentStage}}}"
-          PLUS_PRICE_ID: !Sub "{{resolve:ssm:/slchess/membership/plus/price-id}}"
-          PREMIUM_PRICE_ID: !Sub "{{resolve:ssm:/slchess/membership/premium/price-id}}"
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /payment/checkout
-            Method: POST
-            ApiId: !Ref HttpApi
-
-  PaymentConfirmationFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: !Sub "${StackName}-${DeploymentStage}-PaymentConfirmation"
-      CodeUri: ../cmd/lambda/paymentConfirmation/
-      Handler: bootstrap
-      Runtime: provided.al2023
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserProfilesTableName
-        - Statement:
-            Effect: Allow
-            Action:
-              - ssm:GetParameter
-            Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/slchess/membership/*"
-      Environment:
-        Variables:
-          STRIPE_SECRET_KEY: !Sub "{{resolve:ssm:/slchess/payment/stripe/secret-key-${DeploymentStage}}}"
-          STRIPE_WEBHOOK_SECRET: !Sub "{{resolve:ssm:/slchess/payment/stripe/webhook-key-${DeploymentStage}}}"
-          USER_PROFILES_TABLE_NAME: !ImportValue UserProfilesTableName
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /payment/confirm
-            Auth:
-              Authorizer: NONE
-            Method: POST
-            ApiId: !Ref HttpApi
-
-  EvaluationWorkAcquireFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: !Sub "${StackName}-${DeploymentStage}-EvaluationWorkAcquire"
-      CodeUri: ../cmd/lambda/evaluationWorkAcquire/
-      Handler: bootstrap
-      Runtime: provided.al2023
-      Timeout: 30
-      Policies:
-        - SQSPollerPolicy:
-            QueueName: !ImportValue EvaluationRequestQueueName
-      Environment:
-        Variables:
-          EVALUATION_REQUEST_QUEUE_URL: !ImportValue EvaluationRequestQueueUrl
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /stofinet/acquire
-            Auth:
-              Authorizer: NONE
-            Method: GET
-            ApiId: !Ref HttpApi
-
-  EvaluationSubmitFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: !Sub "${StackName}-${DeploymentStage}-EvaluationSubmit"
-      CodeUri: ../cmd/lambda/evaluationSubmit/
-      Handler: bootstrap
-      Runtime: provided.al2023
-      Timeout: 30
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !ImportValue EvaluationsTableName
-        - SQSPollerPolicy:
-            QueueName: !ImportValue EvaluationRequestQueueName
-        - Statement:
-            - Effect: Allow
-              Action:
-                - "execute-api:ManageConnections"
-              Resource: !Sub
-                - "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApiId}/*"
-                - WebsocketApiId: !ImportValue WebsocketApiId
-      Environment:
-        Variables:
-          EVALUATION_REQUEST_QUEUE_URL: !ImportValue EvaluationRequestQueueUrl
-          WEBSOCKET_API_ID: !ImportValue WebsocketApiId
-          WEBSOCKET_API_STAGE: !Ref DeploymentStage
-          EVALUATIONS_TABLE_NAME: !ImportValue EvaluationsTableName
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /stofinet/evaluation
-            Auth:
-              Authorizer: NONE
-            Method: POST
-            ApiId: !Ref HttpApi
-
+{{- if .IncludeFriendService }}
   FriendshipGetFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -836,29 +585,7 @@ Resources:
             Path: /friend/{id}/reject
             Method: POST
             ApiId: !Ref HttpApi
-
-  ApplicationEndpointPutFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: !Sub "${StackName}-${DeploymentStage}-ApplicationEndpointPut"
-      CodeUri: ../cmd/lambda/applicationEndpointPut/
-      Handler: bootstrap
-      Runtime: provided.al2023
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !ImportValue ApplicationEndpointsTableName
-      Environment:
-        Variables:
-          APPLICATION_ENDPOINTS_TABLE_NAME: !ImportValue ApplicationEndpointsTableName
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /applicationEndpoint
-            Method: POST
-            ApiId: !Ref HttpApi
+{{- end }}
 
 Outputs:
   HttpApiEndpoint:

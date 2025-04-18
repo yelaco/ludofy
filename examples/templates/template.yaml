@@ -1,13 +1,11 @@
 AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
-Description: Root Stack for Backend
+Description: Root Stack for Slchess Backend
 
 Parameters:
   ServerImageUri:
-    Type: List<String>
-    Description: "URI of the Docker image for game server in ECR"
-  UserId:
     Type: String
+    Description: "URI of the Docker image for game server in ECR"
   DeploymentStage:
     Type: String
     Default: dev
@@ -16,7 +14,7 @@ Resources:
   StorageStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/storage.yaml
+      TemplateURL: ./templates/storage.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
@@ -24,7 +22,7 @@ Resources:
   AuthStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/auth.yaml
+      TemplateURL: ./templates/auth.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
@@ -33,7 +31,7 @@ Resources:
   AppSyncStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/appsync.yaml
+      TemplateURL: ./templates/appsync.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
@@ -44,11 +42,10 @@ Resources:
   ComputeStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/compute.yaml
+      TemplateURL: ./templates/compute.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         ServerImageUri: !Ref ServerImageUri
-        StofinetImageUri: !Ref StofinetImageUri
         DeploymentStage: !Ref DeploymentStage
     DependsOn:
       - StorageStack
@@ -66,7 +63,7 @@ Resources:
   WebsocketApiStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/websocketApi.yaml
+      TemplateURL: ./templates/websocketApi.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
@@ -79,7 +76,7 @@ Resources:
   HttpApiStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/httpApi.yaml
+      TemplateURL: ./templates/httpApi.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
@@ -93,7 +90,7 @@ Resources:
   LogStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://ludofy.s3.ap-southeast-2.amazonaws.com/${UserId}/templates/log.yaml
+      TemplateURL: ./templates/log.yaml
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
@@ -150,22 +147,6 @@ Outputs:
   MatchSpectateEndpointUrl:
     Description: "Endpoint URL for spectating a match"
     Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/match/{id}/spectate"
-
-  PuzzleGetEndpointUrl:
-    Description: "Endpoint URL for getting a puzzle"
-    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/puzzle/{id}"
-
-  PuzzleListEndpointUrl:
-    Description: "Endpoint URL for puzzle list by rating"
-    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/puzzles?limit=5&startKey=<START-KEY>"
-
-  PuzzleProfileGetEndpointUrl:
-    Description: "Endpoint URL for getting puzzle profile"
-    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/puzzle/profile"
-
-  PuzzleSolveEndpointUrl:
-    Description: "Endpoint URL for mark a puzzle as solved"
-    Value: !Sub "POST ${HttpApiStack.Outputs.HttpApiEndpoint}/puzzle/{id}/solved"
 
   FriendshipGetEndpointUrl:
     Description: "Endpoint URL for getting a friendship information"
