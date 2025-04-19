@@ -2,7 +2,7 @@ FROM amazonlinux:2
 
 # Install necessary tools
 RUN yum update -y && \
-  yum install -y git python3 pip unzip wget && \
+  yum install -y git python3 pip unzip wget tar && \
   wget https://go.dev/dl/go1.24.1.linux-amd64.tar.gz && \
   rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz && \
   curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
