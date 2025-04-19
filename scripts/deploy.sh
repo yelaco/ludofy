@@ -22,6 +22,7 @@ cd workspace
 aws s3 cp "s3://ludofy/$USER_ID/$BACKEND_ID/templates/" ./templates --recursive
 
 mv ./templates/template.yaml .
+export PATH=$PATH:/usr/local/go/bin
 
 # Build project
 sam build
