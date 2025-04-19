@@ -1,8 +1,77 @@
 <template>
   <div class="p-6 max-w-4xl mx-auto">
     <h1 class="text-3xl font-bold mb-6">Deploy New Game Backend</h1>
+
     <BackendForm v-model="stackName" />
     <ServiceSelector v-model="services" />
+
+    <!-- Matchmaking Configuration -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold mb-2">🎯 Matchmaking Configuration</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium">Players per match</label>
+          <input
+            type="number"
+            v-model="matchmaking.matchSize"
+            class="input"
+            min="2"
+          />
+        </div>
+
+        <!-- Only show if Ranking service is selected -->
+        <template v-if="services.ranking">
+          <div>
+            <label class="block text-sm font-medium">Rating Algorithm</label>
+            <select v-model="matchmaking.ratingAlgorithm" class="input">
+              <option value="glicko">Glicko</option>
+              <option value="elo">ELO</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium">Initial Rating</label>
+            <input
+              type="number"
+              v-model="matchmaking.initialRating"
+              class="input"
+              min="0"
+            />
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Server Configuration -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold mb-2">🖥️ Server Configuration</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium">Initial vCPU</label>
+          <select v-model="server.cpu" class="input">
+            <option :value="0.25">0.25</option>
+            <option :value="0.5">0.5</option>
+            <option :value="1">1</option>
+            <option :value="2">2</option>
+            <option :value="4">4</option>
+            <option :value="8">8</option>
+            <option :value="16">16</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Initial Memory</label>
+          <select v-model="server.memory" class="input">
+            <option
+              v-for="memory in allowedMemoryOptions"
+              :key="memory"
+              :value="memory"
+            >
+              {{ memory / 1024 }} GB
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
 
     <hr class="my-8" />
 
@@ -16,9 +85,9 @@
 </template>
 
 <script setup>
+import { ref, computed, watch } from "vue";
 import BackendForm from "@/components/BackendForm.vue";
 import ServiceSelector from "@/components/ServiceSelector.vue";
-import { ref } from "vue";
 
 const stackName = ref("");
 const services = ref({
@@ -28,11 +97,68 @@ const services = ref({
   matchSpectating: false,
 });
 
+const matchmaking = ref({
+  matchSize: 2,
+  ratingAlgorithm: "glicko",
+  initialRating: 400,
+});
+
+const server = ref({
+  cpu: 0.5,
+  memory: 1024,
+});
+
+// Compute allowed memory options based on selected CPU
+const allowedMemoryOptions = computed(() => {
+  const cpu = server.value.cpu;
+  if (cpu === 0.25) return [512, 1024, 2048];
+  if (cpu === 0.5) return [1024, 2048, 3072, 4096];
+  if (cpu === 1) return [2048, 3072, 4096, 5120, 6144, 7168, 8192];
+  if (cpu === 2)
+    return [
+      4096, 5120, 6144, 7168, 8192, 9216, 10240, 11264, 12288, 13312, 14336,
+      15360, 16384,
+    ];
+  if (cpu === 4) return Array.from({ length: 23 }, (_, i) => (8 + i) * 1024);
+  if (cpu === 8)
+    return Array.from({ length: 12 }, (_, i) => (16 + i * 4) * 1024);
+  if (cpu === 16)
+    return Array.from({ length: 12 }, (_, i) => (32 + i * 8) * 1024);
+  return [];
+});
+
+// Watch CPU changes and validate memory
+watch(
+  () => server.value.cpu,
+  () => {
+    if (!allowedMemoryOptions.value.includes(server.value.memory)) {
+      server.value.memory = allowedMemoryOptions.value[0];
+    }
+  },
+);
+
 function deployBackend() {
   const data = {
     stackName: stackName.value,
     services: services.value,
+    matchmaking: matchmaking.value,
+    server: server.value,
   };
-  console.log("Deploying...", data);
+  console.log("Deploying backend with configuration:", data);
 }
 </script>
+
+<style scoped>
+.input {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  outline: none;
+}
+.input:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.5);
+}
+</style>

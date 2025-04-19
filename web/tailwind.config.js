@@ -5,5 +5,5 @@ export default {
   theme: {
     extend: {},
   },
-  plugins: [],
+  plugins: ["@tailwindcss/postcss", "@tailwindcss/vite"],
 };
