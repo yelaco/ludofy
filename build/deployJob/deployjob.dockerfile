@@ -2,11 +2,11 @@ FROM amazonlinux:2
 
 # Install necessary tools
 RUN yum update -y && \
-  yum install -y git python3 pip unzip && \
+  yum install -y git python3 pip unzip wget && \
   curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
   unzip awscliv2.zip && \
   ./aws/install && \
-  curl "https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip" && \
+  wget "https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip" && \
   unzip aws-sam-cli-linux-x86_64.zip -d sam-installation && \
   ./sam-installation/install
 
