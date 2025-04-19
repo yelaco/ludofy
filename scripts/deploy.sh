@@ -35,4 +35,5 @@ sam deploy \
 	--s3-bucket "$S3_BUCKET" \
 	--s3-prefix "$USER_ID/$BACKEND_ID/deployment" \
 	--capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-	--no-confirm-changeset
+	--no-confirm-changeset \
+	--on-failure DELETE
