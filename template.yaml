@@ -104,6 +104,8 @@ Resources:
           - Type: MEMORY
             Value: "2048"
         ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+        NetworkConfiguration:
+          AssignPublicIp: ENABLED
 
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
@@ -199,7 +201,120 @@ Resources:
             Method: POST
             ApiId: !Ref HttpApi
 
+  BackendGetFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-BackendGet"
+      CodeUri: ./cmd/paas/backendGet/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Backends
+      Environment:
+        Variables:
+          BACKENDS_TABLE_NAME: !Ref Backends
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /backend/{id}
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  BackendListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-BackendList"
+      CodeUri: ./cmd/paas/backendList/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Backends
+      Environment:
+        Variables:
+          BACKENDS_TABLE_NAME: !Ref Backends
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /backends
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  DeploymentGetFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-DeploymentGet"
+      CodeUri: ./cmd/paas/deploymentGet/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Deployments
+      Environment:
+        Variables:
+          DEPLOYMENTS_TABLE_NAME: !Ref Deployments
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /deployment/{id}
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  DeploymentListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-DeploymentList"
+      CodeUri: ./cmd/paas/deploymentList/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Deployments
+      Environment:
+        Variables:
+          DEPLOYMENTS_TABLE_NAME: !Ref Deployments
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /deployments
+            Method: GET
+            ApiId: !Ref HttpApi
+
   ### Storage ###
+  Backends:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-Backends"
+      AttributeDefinitions:
+        - AttributeName: Id
+          AttributeType: S
+        - AttributeName: UserId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserIndex
+          KeySchema:
+            - AttributeName: UserId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
   Deployments:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -225,3 +340,19 @@ Outputs:
   DeployBackendUrl:
     Description: "Endpoint URL for deploying backend"
     Value: !Sub "POST https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}/deploy"
+
+  BackendGetUrl:
+    Description: "Endpoint URL for getting backend information"
+    Value: !Sub "GET https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}/backend/{id}"
+
+  BackendListUrl:
+    Description: "Endpoint URL for listing backends of a user"
+    Value: !Sub "GET https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}/backends"
+
+  DeploymentGetUrl:
+    Description: "Endpoint URL for getting deployment information"
+    Value: !Sub "GET https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}/deployment/{id}"
+
+  DeploymentListUrl:
+    Description: "Endpoint URL for listing deployments of a user"
+    Value: !Sub "GET https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}/deployments"

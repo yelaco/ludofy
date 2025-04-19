@@ -11,48 +11,48 @@ import (
 	"github.com/chess-vn/slchess/internal/paas/domains/entities"
 )
 
-var ErrPlatformNotFound = fmt.Errorf("platform not found")
+var ErrDeploymentNotFound = fmt.Errorf("deployment not found")
 
-func (client *Client) GetPlatform(
+func (client *Client) GetDeployment(
 	ctx context.Context,
-	platformId string,
+	id string,
 ) (
-	entities.Platform,
+	entities.Deployment,
 	error,
 ) {
 	output, err := client.dynamodb.GetItem(ctx, &dynamodb.GetItemInput{
-		TableName: client.cfg.PlatformsTableName,
+		TableName: client.cfg.DeploymentsTableName,
 		Key: map[string]types.AttributeValue{
 			"Id": &types.AttributeValueMemberS{
-				Value: platformId,
+				Value: id,
 			},
 		},
 	})
 	if err != nil {
-		return entities.Platform{}, err
+		return entities.Deployment{}, err
 	}
 	if output.Item == nil {
-		return entities.Platform{}, ErrPlatformNotFound
+		return entities.Deployment{}, ErrDeploymentNotFound
 	}
-	var platform entities.Platform
-	if err := attributevalue.UnmarshalMap(output.Item, &platform); err != nil {
-		return entities.Platform{}, err
+	var deployment entities.Deployment
+	if err := attributevalue.UnmarshalMap(output.Item, &deployment); err != nil {
+		return entities.Deployment{}, err
 	}
-	return platform, nil
+	return deployment, nil
 }
 
-func (client *Client) FetchPlatforms(
+func (client *Client) FetchDeployments(
 	ctx context.Context,
 	userId string,
 	lastKey map[string]types.AttributeValue,
 	limit int32,
 ) (
-	[]entities.Platform,
+	[]entities.Deployment,
 	map[string]types.AttributeValue,
 	error,
 ) {
 	input := &dynamodb.QueryInput{
-		TableName:              client.cfg.PlatformsTableName,
+		TableName:              client.cfg.DeploymentsTableName,
 		IndexName:              aws.String("UserIndex"),
 		KeyConditionExpression: aws.String("UserId = :userId"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
@@ -66,24 +66,24 @@ func (client *Client) FetchPlatforms(
 	if err != nil {
 		return nil, nil, err
 	}
-	var platforms []entities.Platform
-	err = attributevalue.UnmarshalListOfMaps(output.Items, &platforms)
+	var deployments []entities.Deployment
+	err = attributevalue.UnmarshalListOfMaps(output.Items, &deployments)
 	if err != nil {
 		return nil, nil, err
 	}
-	return platforms, output.LastEvaluatedKey, nil
+	return deployments, output.LastEvaluatedKey, nil
 }
 
-func (client *Client) PutPlatform(
+func (client *Client) PutDeployment(
 	ctx context.Context,
-	platform entities.Platform,
+	deployment entities.Deployment,
 ) error {
-	av, err := attributevalue.MarshalMap(platform)
+	av, err := attributevalue.MarshalMap(deployment)
 	if err != nil {
-		return fmt.Errorf("failed to marshal match record map: %w", err)
+		return fmt.Errorf("failed to marshal map: %w", err)
 	}
 	_, err = client.dynamodb.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: client.cfg.PlatformsTableName,
+		TableName: client.cfg.DeploymentsTableName,
 		Item:      av,
 	})
 	if err != nil {

@@ -31,21 +31,21 @@ func handler(
 	error,
 ) {
 	auth.MustAuth(event.RequestContext.Authorizer)
-	backendId := event.PathParameters["id"]
+	deploymentId := event.PathParameters["id"]
 
-	backend, err := storageClient.GetBackend(ctx, backendId)
+	deployment, err := storageClient.GetDeployment(ctx, deploymentId)
 	if err != nil {
-		if errors.Is(err, storage.ErrBackendNotFound) {
+		if errors.Is(err, storage.ErrDeploymentNotFound) {
 			return events.APIGatewayProxyResponse{
 				StatusCode: http.StatusNotFound,
 			}, nil
 		}
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-		}, fmt.Errorf("failed to get platform: %w", err)
+		}, fmt.Errorf("failed to get deployment: %w", err)
 	}
 
-	resp := dtos.BackendResponseFromEntity(backend)
+	resp := dtos.DeploymentResponseFromEntity(deployment)
 	respJson, err := json.Marshal(resp)
 	if err != nil {
 		return events.APIGatewayProxyResponse{

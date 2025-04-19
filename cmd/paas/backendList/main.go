@@ -41,7 +41,7 @@ func handler(
 			StatusCode: http.StatusBadRequest,
 		}, fmt.Errorf("failed to extract parameters: %w", err)
 	}
-	platforms, lastEvalKey, err := storageClient.FetchPlatforms(
+	backends, lastEvalKey, err := storageClient.FetchBackends(
 		ctx,
 		userId,
 		startKey,
@@ -50,12 +50,12 @@ func handler(
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-		}, fmt.Errorf("failed to fetch games: %w", err)
+		}, fmt.Errorf("failed to fetch backends: %w", err)
 	}
 
-	resp := dtos.PlatformListResponseFromEntities(platforms)
+	resp := dtos.BackendListResponseFromEntities(backends)
 	if lastEvalKey != nil {
-		resp.NextPageToken = &dtos.NextPlatformPageToken{}
+		resp.NextPageToken = &dtos.NextBackendPageToken{}
 		fmt.Println(lastEvalKey)
 	}
 
@@ -91,7 +91,7 @@ func extractParameters(
 	// Check for startKey (optional)
 	var startKey map[string]types.AttributeValue
 	if startKeyStr, ok := params["startKey"]; ok {
-		var nextPageToken dtos.NextPlatformPageToken
+		var nextPageToken dtos.NextBackendPageToken
 		if err := json.Unmarshal(
 			[]byte(startKeyStr),
 			&nextPageToken,

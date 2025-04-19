@@ -19,6 +19,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/chess-vn/slchess/internal/paas/aws/auth"
 	"github.com/chess-vn/slchess/internal/paas/aws/storage"
+	"github.com/chess-vn/slchess/internal/paas/domains/dtos"
+	"github.com/chess-vn/slchess/internal/paas/domains/entities"
 	"github.com/chess-vn/slchess/pkg/utils"
 )
 
@@ -44,15 +46,6 @@ var (
 	batchJobDefinition string
 )
 
-type DeployInput struct {
-	StackName                     string `json:"stackName"`
-	ServerImageUri                string `json:"serverImageUri"`
-	IncludeChatService            bool   `json:"includeChatService"`
-	IncludeFriendService          bool   `json:"includeFriendService"`
-	IncludeRankingService         bool   `json:"includeRankingService"`
-	IncludeMatchSpectatingService bool   `json:"includeMatchSpectatingService"`
-}
-
 func init() {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
 	storageClient = storage.NewClient(nil, s3.NewFromConfig(cfg))
@@ -73,7 +66,7 @@ func handler(
 	userId := auth.MustAuth(event.RequestContext.Authorizer)
 	backendId := utils.GenerateUUID()
 
-	var input DeployInput
+	var input dtos.DeployInput
 	err := json.Unmarshal([]byte(event.Body), &input)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
@@ -144,8 +137,29 @@ func handler(
 		}, fmt.Errorf("failed to submit batch job: %w", err)
 	}
 
+	deployment := entities.Deployment{
+		Id:        utils.GenerateUUID(),
+		UserId:    userId,
+		StackName: input.StackName,
+		Status:    "pending",
+	}
+	if err := storageClient.PutDeployment(ctx, deployment); err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+		}, fmt.Errorf("failed to put deployment: %w", err)
+	}
+
+	resp := dtos.DeploymentResponseFromEntity(deployment)
+	respJson, err := json.Marshal(resp)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+		}, fmt.Errorf("failed to marshal response: %w", err)
+	}
+
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusAccepted,
+		Body:       string(respJson),
 	}, nil
 }
 

@@ -1,6 +1,6 @@
 package entities
 
-type Platform struct {
+type Backend struct {
 	Id     string `dynamodbav:"Id"`
 	UserId string `dynamodbav:"UserId"`
 }
