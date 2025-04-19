@@ -99,6 +99,7 @@ Resources:
   ApplyNotificationFunctionRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub "${StackName}-ApplyNotificationFunctionRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -399,6 +400,22 @@ Resources:
       BillingMode: PAY_PER_REQUEST
 {{- end }}
 
+  ApplicationEndpoints:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-ApplicationEndpoints"
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+        - AttributeName: DeviceToken
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+        - AttributeName: DeviceToken
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
 Outputs:
   ConnectionsTableName:
     Value: !Ref Connections
@@ -507,3 +524,8 @@ Outputs:
     Value: !GetAtt UserMatches.Arn
     Export:
       Name: !Sub "${StackName}-UserMatchesTableArn"
+
+  ApplicationEndpointsTableName:
+    Value: !Ref ApplicationEndpoints
+    Export:
+      Name: !Sub "${StackName}-ApplicationEndpointsTableName"

@@ -192,7 +192,7 @@ Resources:
   ApiGatewayRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: ApiGatewayRole
+      RoleName: !Sub "${StackName}-ApiGatewayRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:

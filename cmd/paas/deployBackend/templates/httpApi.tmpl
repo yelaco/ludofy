@@ -656,6 +656,31 @@ Resources:
             ApiId: !Ref HttpApi
 {{- end }}
 
+  ApplicationEndpointPutFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-ApplicationEndpointPut"
+      CodeUri: ../cmd/lambda/applicationEndpointPut/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ApplicationEndpointsTableName"
+      Environment:
+        Variables:
+          APPLICATION_ENDPOINTS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ApplicationEndpointsTableName"
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /applicationEndpoint
+            Method: POST
+            ApiId: !Ref HttpApi
+
 Outputs:
   HttpApiEndpoint:
     Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}"

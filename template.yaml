@@ -154,86 +154,35 @@ Resources:
               Service: ecs-tasks.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: DeployJobInlinePolicy
+        - PolicyName: DeployJobPolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              # CloudFormation permissions to manage stacks
               - Effect: Allow
                 Action:
-                  - cloudformation:CreateStack
-                  - cloudformation:UpdateStack
-                  - cloudformation:DeleteStack
-                  - cloudformation:DescribeStacks
-                  - cloudformation:CreateChangeSet
-                  - cloudformation:ExecuteChangeSet
-                  - cloudformation:DescribeChangeSet
-                  - cloudformation:DescribeStackEvents
-                  - cloudformation:GetTemplate
-                Resource: "*"
+                  - iam:DetachRolePolicy
+                  - iam:DeleteRolePolicy
+                Resource: "arn:aws:iam::*:role/*"
 
-              # S3 permissions to upload SAM artifacts (Lambda zips, etc.)
               - Effect: Allow
                 Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:ListBucket
-                  - s3:CreateBucket
-                Resource: "*"
-
-              # IAM permissions if your SAM template creates Lambda execution roles
-              - Effect: Allow
-                Action:
-                  - iam:PassRole
-                  - iam:CreateRole
-                  - iam:AttachRolePolicy
-                  - iam:PutRolePolicy
-                  - iam:CreatePolicy
-                Resource: "*"
-
-              # Lambda permissions if you deploy serverless functions
-              - Effect: Allow
-                Action:
-                  - lambda:CreateFunction
-                  - lambda:UpdateFunctionCode
-                  - lambda:UpdateFunctionConfiguration
-                  - lambda:DeleteFunction
-                  - lambda:GetFunction
-                Resource: "*"
-
-              # API Gateway permissions if you deploy APIs
-              - Effect: Allow
-                Action:
-                  - apigateway:POST
-                  - apigateway:PUT
-                  - apigateway:PATCH
-                  - apigateway:DELETE
-                  - apigateway:GET
-                Resource: "*"
-
-              # DynamoDB permissions (keep your previous ones)
-              - Effect: Allow
-                Action:
-                  - dynamodb:GetItem
-                  - dynamodb:PutItem
-                Resource: "*"
-
-              # CloudWatch Logs permissions for function logs
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                  - logs:DeleteLogGroup
-                  - logs:PutRetentionPolicy
-                Resource: "*"
-
-              # AWS Batch permissions (if needed for submitting batch jobs inside deployment flow)
-              - Effect: Allow
-                Action:
-                  - batch:SubmitJob
-                  - batch:DescribeJobs
-                  - batch:TerminateJob
+                  - cloudformation:*
+                  - s3:*
+                  - iam:*
+                  - cognito-idp:*
+                  - lambda:*
+                  - dynamodb:*
+                  - appsync:*
+                  - logs:*
+                  - apigateway:*
+                  - batch:*
+                  - events:*
+                  - states:*
+                  - secretsmanager:GetSecretValue
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ecs:*
+                  - application-autoscaling:*
                 Resource: "*"
 
   ### HTTP API Gateway ###

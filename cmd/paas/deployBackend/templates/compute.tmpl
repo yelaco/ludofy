@@ -81,7 +81,7 @@ Resources:
   ServerRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: ServerRole
+      RoleName: !Sub "${StackName}-ServerRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -141,6 +141,7 @@ Resources:
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub "${StackName}-ECSTaskExecutionRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:

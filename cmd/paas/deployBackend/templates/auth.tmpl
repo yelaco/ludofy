@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Authentication Stack for Slchess
+Description: Authentication Stack
 
 Globals:
   Function:
@@ -76,9 +76,6 @@ Resources:
             TableName:
               Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
 {{- end }}
-        - DynamoDBCrudPolicy:
-            TableName:
-              Fn::ImportValue: !Sub "${StackName}-PuzzleProfilesTableName"
       Environment:
         Variables:
           USER_PROFILES_TABLE_NAME:

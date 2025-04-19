@@ -133,6 +133,7 @@ Resources:
   AppSyncRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub "${StackName}-AppSyncRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -160,7 +161,7 @@ Resources:
   AppSyncAccessRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: AppSyncAccessRole
+      RoleName: !Sub "${StackName}-AppSyncAccessRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
