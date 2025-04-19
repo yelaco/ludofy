@@ -185,6 +185,45 @@ Resources:
                   - application-autoscaling:*
                 Resource: "*"
 
+  BackendDeploySuccessRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: BackendDeploySuccessRule
+      EventPattern:
+        source:
+          - aws.batch
+        detail-type:
+          - Batch Job State Change
+        detail:
+          status:
+            - SUCCEEDED
+          jobName:
+            - backend-deploy-job
+      Targets:
+        - Arn: !GetAtt BackendPutFunction.Arn
+          Id: BackendPutTarget
+          InputTransformer:
+            InputPathsMap:
+              jobName: "$.detail.jobName"
+              jobId: "$.detail.jobId"
+              jobQueue: "$.detail.jobQueue"
+              deploymentId: "$.detail.tags.deploymentId"
+            InputTemplate: |
+              {
+                "jobName": "<jobName>",
+                "jobId": "<jobId>",
+                "jobQueue": "<jobQueue>",
+                "deploymentId": "<deploymentId>"
+              }
+
+  PermissionForEventsToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt BackendPutFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt BackendDeploySuccessRule.Arn
+
   ### HTTP API Gateway ###
   HttpApi:
     Type: AWS::Serverless::HttpApi
@@ -196,7 +235,6 @@ Resources:
         AllowOrigins: ["*"]
         AllowHeaders:
           - Authorization
-          - Stripe-Signature
         AllowMethods:
           - GET
           - POST
@@ -213,13 +251,13 @@ Resources:
             IdentitySource: "$request.header.Authorization"
         DefaultAuthorizer: CognitoAuthorizer
 
-  DeployBackend:
+  BackendDeployFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      FunctionName: !Sub "${StackName}-${DeploymentStage}-DeployBackend"
-      CodeUri: ./cmd/paas/deployBackend/
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-BackendDeploy"
+      CodeUri: ./cmd/paas/backendDeploy/
       Handler: bootstrap
       Runtime: provided.al2023
       Timeout: 10
@@ -236,7 +274,7 @@ Resources:
       Environment:
         Variables:
           MAIN_BUCKET_NAME: !Ref StackName
-          BATCH_JOB_NAME: "deploy-backend"
+          BATCH_JOB_NAME: "backend-deploy-job"
           BATCH_JOB_QUEUE: !Ref BatchJobQueue
           BATCH_JOB_DEFINITION: !Ref BatchJobDefinition
           DEPLOYMENTS_TABLE_NAME: !Ref Deployments
@@ -247,6 +285,26 @@ Resources:
             Path: /deploy
             Method: POST
             ApiId: !Ref HttpApi
+
+  BackendPutFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-BackendPut"
+      CodeUri: ./cmd/paas/backendPut/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Timeout: 10
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Deployments
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Backends
+      Environment:
+        Variables:
+          DEPLOYMENTS_TABLE_NAME: !Ref Deployments
+          BACKENDS_TABLE_NAME: !Ref Backends
 
   BackendGetFunction:
     Type: AWS::Serverless::Function

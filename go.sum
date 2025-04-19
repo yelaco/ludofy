@@ -24,6 +24,8 @@ github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi v1.24.1 h1:ECzzO1in
 github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi v1.24.1/go.mod h1:zJtUxSHKzEvu7CeiViuk5MgDNTWaCSxrGtkJhzO3+A8=
 github.com/aws/aws-sdk-go-v2/service/batch v1.52.2 h1:nE6oDDpKBD/dmEVNAEkEharzI6Kn0gK6N4jkTYwknMo=
 github.com/aws/aws-sdk-go-v2/service/batch v1.52.2/go.mod h1:F8tHrowT/XPtWMERTbDvJDUILrZgUV8W2lg4MmiuMtc=
+github.com/aws/aws-sdk-go-v2/service/cloudformation v1.59.2 h1:o9cuZdZlI9VWMqsNa2mnf2IRsFAROHnaYA1BW3lHGuY=
+github.com/aws/aws-sdk-go-v2/service/cloudformation v1.59.2/go.mod h1:penaZKzGmqHGZId4EUCBIW/f9l4Y7hQ5NKd45yoCYuI=
 github.com/aws/aws-sdk-go-v2/service/dynamodb v1.42.0 h1:EJXx6zb+lOe/Do2bO0d0dwVnIRGoP5J5xZ0BTn3LbqM=
 github.com/aws/aws-sdk-go-v2/service/dynamodb v1.42.0/go.mod h1:yYaWRnVSPyAmexW5t7G3TcuYoalYfT+xQwzWsvtUQ7M=
 github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.25.1 h1:ZJfy2cSyoAOl7maGfRI4/J+cy00AczaYwVCow+bsc4k=

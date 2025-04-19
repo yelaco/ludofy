@@ -3,8 +3,10 @@ package dtos
 import "github.com/chess-vn/slchess/internal/paas/domains/entities"
 
 type BackendResponse struct {
-	Id     string `json:"id"`
-	UserId string `json:"userId"`
+	Id        string            `json:"id"`
+	UserId    string            `json:"userId"`
+	StackName string            `json:"stackName"`
+	Outputs   map[string]string `json:"outputs"`
 }
 
 type BackendListResponse struct {
@@ -28,7 +30,8 @@ func BackendListResponseFromEntities(backends []entities.Backend) BackendListRes
 
 func BackendResponseFromEntity(backend entities.Backend) BackendResponse {
 	return BackendResponse{
-		Id:     backend.Id,
-		UserId: backend.UserId,
+		Id:        backend.Id,
+		UserId:    backend.UserId,
+		StackName: backend.StackName,
 	}
 }

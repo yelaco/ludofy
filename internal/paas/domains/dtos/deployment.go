@@ -14,6 +14,7 @@ type DeployInput struct {
 type DeploymentResponse struct {
 	Id        string `json:"id"`
 	UserId    string `json:"userId"`
+	BackendId string `json:"backendId"`
 	StackName string `json:"stackName"`
 	Status    string `json:"status"`
 }
@@ -41,6 +42,7 @@ func DeploymentResponseFromEntity(deployment entities.Deployment) DeploymentResp
 	return DeploymentResponse{
 		Id:        deployment.Id,
 		UserId:    deployment.UserId,
+		BackendId: deployment.BackendId,
 		StackName: deployment.StackName,
 		Status:    deployment.Status,
 	}

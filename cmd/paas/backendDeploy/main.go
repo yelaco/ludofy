@@ -69,6 +69,7 @@ func handler(
 ) {
 	userId := auth.MustAuth(event.RequestContext.Authorizer)
 	backendId := utils.GenerateUUID()
+	deploymentId := utils.GenerateUUID()
 
 	var input dtos.DeployInput
 	err := json.Unmarshal([]byte(event.Body), &input)
@@ -107,9 +108,12 @@ func handler(
 	}
 
 	jobInput := &batch.SubmitJobInput{
-		JobName:       aws.String(batchJobName + "-" + userId),
+		JobName:       aws.String(batchJobName),
 		JobQueue:      aws.String(batchJobQueue),
 		JobDefinition: aws.String(batchJobDefinition),
+		Tags: map[string]string{
+			"deploymentId": deploymentId,
+		},
 
 		// Optional: Pass environment variables or overrides
 		ContainerOverrides: &types.ContainerOverrides{
@@ -142,8 +146,9 @@ func handler(
 	}
 
 	deployment := entities.Deployment{
-		Id:        utils.GenerateUUID(),
+		Id:        deploymentId,
 		UserId:    userId,
+		BackendId: backendId,
 		StackName: input.StackName,
 		Status:    "pending",
 	}
