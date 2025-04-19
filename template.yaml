@@ -104,6 +104,7 @@ Resources:
           - Type: MEMORY
             Value: "2048"
         ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+        JobRoleArn: !GetAtt DeployJobRole.Arn
         NetworkConfiguration:
           AssignPublicIp: ENABLED
 
@@ -140,6 +141,32 @@ Resources:
                   - ssm:GetParameters
                 Resource:
                   - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${StackName}/*"
+
+  DeployJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: DeployJobRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: BatchJobTaskInlinePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:PutObject
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  # Add whatever permissions your Batch job needs
+                Resource: "*"
 
   ### HTTP API Gateway ###
   HttpApi:
@@ -187,12 +214,15 @@ Resources:
               Action:
                 - batch:SubmitJob
               Resource: "*"
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Deployments
       Environment:
         Variables:
           MAIN_BUCKET_NAME: !Ref StackName
           BATCH_JOB_NAME: "deploy-backend"
           BATCH_JOB_QUEUE: !Ref BatchJobQueue
           BATCH_JOB_DEFINITION: !Ref BatchJobDefinition
+          DEPLOYMENTS_TABLE_NAME: !Ref Deployments
       Events:
         ApiEvent:
           Type: HttpApi
