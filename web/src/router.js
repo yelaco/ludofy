@@ -1,6 +1,9 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Home from "./views/Home.vue";
-import CreatePlatform from "./views/CreatePlatform.vue";
+import DeployBackend from "./views/DeployBackend.vue";
+import BackendDetail from "./views/BackendDetail.vue";
+import Deployments from "./views/Deployments.vue";
+import Settings from "./views/Settings.vue";
 
 const routes = [
   {
@@ -9,24 +12,24 @@ const routes = [
     component: Home,
   },
   {
-    path: "/create",
-    name: "CreatePlatform",
-    component: CreatePlatform,
+    path: "/deploy",
+    name: "DeployBackend",
+    component: DeployBackend,
   },
   {
-    path: "/platform/:id",
-    name: "PlatformDetail",
-    component: () => import("./views/PlatformDetail.vue"),
+    path: "/backend/:stackName",
+    name: "BackendDetail",
+    component: BackendDetail,
   },
   {
     path: "/deployments",
     name: "Deployments",
-    component: () => import("./views/Deployments.vue"),
+    component: Deployments,
   },
   {
     path: "/settings",
     name: "Settings",
-    component: () => import("./views/Settings.vue"),
+    component: Settings,
   },
 ];
 

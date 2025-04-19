@@ -48,9 +48,9 @@
       <nav class="flex flex-col gap-1 px-2 py-4">
         <SidebarLink to="/" icon="Home" label="Home" :collapsed="collapsed" />
         <SidebarLink
-          to="/create"
+          to="/deploy"
           icon="PlusSquare"
-          label="Create Platform"
+          label="Deploy Backend"
           :collapsed="collapsed"
         />
         <SidebarLink
