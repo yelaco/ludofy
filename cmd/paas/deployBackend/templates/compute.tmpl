@@ -105,7 +105,8 @@ Resources:
                 Action: appsync:GraphQL
                 Resource: !Sub
                   - "${ApiArn}/*"
-                  - ApiArn: Fn::ImportValue: !Sub "${StackName}-AppSyncApiArn"
+                  - ApiArn:
+                      Fn::ImportValue: !Sub "${StackName}-AppSyncApiArn"
         - PolicyName: DynamoDBAccessPolicy
           PolicyDocument:
             Version: "2012-10-17"
@@ -125,7 +126,8 @@ Resources:
                   - Fn::ImportValue: !Sub "${StackName}-MatchStatesTableArn"
                   - !Sub
                     - "${MatchStatesTableArn}/index/MatchIndex"
-                    - MatchStatesTableArn: Fn::ImportValue: !Sub "${StackName}-MatchStatesTableArn"
+                    - MatchStatesTableArn:
+                        Fn::ImportValue: !Sub "${StackName}-MatchStatesTableArn"
         - PolicyName: ECSTaskProtectionPolicy
           PolicyDocument:
             Version: "2012-10-17"

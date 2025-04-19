@@ -403,7 +403,7 @@ Outputs:
   ConnectionsTableName:
     Value: !Ref Connections
     Export:
-      Name: ConnectionsTableName
+      Name: !Sub "${StackName}-ConnectionsTableName"
 
   UserProfilesTableName:
     Value: !Ref UserProfiles
