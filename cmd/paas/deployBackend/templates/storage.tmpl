@@ -408,102 +408,102 @@ Outputs:
   UserProfilesTableName:
     Value: !Ref UserProfiles
     Export:
-      Name: UserProfilesTableName
+      Name: !Sub "${StackName}-UserProfilesTableName"
 
 {{- if .IncludeRankingService }}
   UserRatingsTableName:
     Value: !Ref UserRatings
     Export:
-      Name: UserRatingsTableName
+      Name: !Sub "${StackName}-UserRatingsTableName"
 
   MatchResultsTableName:
     Value: !Ref MatchResults
     Export:
-      Name: MatchResultsTableName
+      Name: !Sub "${StackName}-MatchResultsTableName"
 {{- end }}
 
   UserMatchesTableName:
     Value: !Ref UserMatches
     Export:
-      Name: UserMatchesTableName
+      Name: !Sub "${StackName}-UserMatchesTableName"
 
   ActiveMatchesTableName:
     Value: !Ref ActiveMatches
     Export:
-      Name: ActiveMatchesTableName
+      Name: !Sub "${StackName}-ActiveMatchesTableName"
 
   MatchStatesTableName:
     Value: !Ref MatchStates
     Export:
-      Name: MatchStatesTableName
+      Name: !Sub "${StackName}-MatchStatesTableName"
 
   MatchmakingTicketsTableName:
     Value: !Ref MatchmakingTickets
     Export:
-      Name: MatchmakingTicketsTableName
+      Name: !Sub "${StackName}-MatchmakingTicketsTableName"
 
 {{- if .IncludeChatService }}
   MessagesTableName:
     Value: !Ref Messages
     Export:
-      Name: MessagesTableName
+      Name: !Sub "${StackName}-MessagesTableName"
 
   MessagesTableArn:
     Value: !GetAtt Messages.Arn
     Export:
-      Name: MessagesTableArn
+      Name: !Sub "${StackName}-MessagesTableArn"
 {{- end }}
 
   MatchRecordsTableName:
     Value: !Ref MatchRecords
     Export:
-      Name: MatchRecordsTableName
+      Name: !Sub "${StackName}-MatchRecordsTableName"
 
 {{- if and .IncludeMatchSpectatingService .IncludeChatService }}
   SpectatorConversationsTableName:
     Value: !Ref SpectatorConversations
     Export:
-      Name: SpectatorConversationsTableName
+      Name: !Sub "${StackName}-SpectatorConversationsTableName"
 
   SpectatorConversationsTableArn:
     Value: !GetAtt SpectatorConversations.Arn
     Export:
-      Name: SpectatorConversationsTableArn
+      Name: !Sub "${StackName}-SpectatorConversationsTableArn"
 {{- end }}
 
 {{- if .IncludeFriendService }}
   FriendshipsTableName:
     Value: !Ref Friendships
     Export:
-      Name: FriendshipsTableName
+      Name: !Sub "${StackName}-FriendshipsTableName"
 
   FriendRequestsTableName:
     Value: !Ref FriendRequests
     Export:
-      Name: FriendRequestsTableName
+      Name: !Sub "${StackName}-FriendRequestsTableName"
 {{- end }}
 
   ImagesBucketName:
     Value: !Ref Images
     Export:
-      Name: ImagesBucketName
+      Name: !Sub "${StackName}-ImagesBucketName"
 
   AvatarsBucketName:
     Value: !Ref Avatars
     Export:
-      Name: AvatarsBucketName
+      Name: !Sub "${StackName}-AvatarsBucketName"
 
   ActiveMatchesTableArn:
     Value: !GetAtt ActiveMatches.Arn
     Export:
-      Name: ActiveMatchesTableArn
+      Name: !Sub "${StackName}-ActiveMatchesTableArn"
 
   MatchStatesTableArn:
     Value: !GetAtt MatchStates.Arn
     Export:
-      Name: MatchStatesTableArn
+      Name: !Sub "${StackName}-MatchStatesTableArn"
 
   UserMatchesTableArn:
     Value: !GetAtt UserMatches.Arn
     Export:
-      Name: UserMatchesTableArn
+      Name: !Sub "${StackName}-UserMatchesTableArn"

@@ -39,9 +39,10 @@ Resources:
             JwtConfiguration:
               issuer: !Sub
                 - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}"
-                - UserPoolId: !ImportValue UserPoolId
+                - UserPoolId:
+                    Fn::ImportValue: !Sub "${StackName}-UserPoolId"
               audience:
-                - !ImportValue UserPoolClientId
+                - Fn::ImportValue: !Sub "${StackName}-UserPoolClientId"
             IdentitySource: "$request.header.Authorization"
         DefaultAuthorizer: CognitoAuthorizer
 
@@ -58,25 +59,33 @@ Resources:
       Timeout: 60
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue ConnectionsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ConnectionsTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue MatchmakingTicketsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-MatchmakingTicketsTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserMatchesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue ActiveMatchesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
 {{- if .IncludeRankingService }}
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserRatingsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue MatchResultsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-MatchResultsTableName"
 {{- end }}
 {{- if and .IncludeMatchSpectatingService .IncludeChatService }}
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue SpectatorConversationsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
 {{- end }}
         - EcsRunTaskPolicy:
-            TaskDefinition: !ImportValue ServerDefinitionArn
+            TaskDefinition:
+              Fn::ImportValue: !Sub "${StackName}-ServerDefinitionArn"
         - Statement:
             - Effect: Allow
               Action:
@@ -95,24 +104,35 @@ Resources:
                 - "execute-api:ManageConnections"
               Resource: !Sub
                 - "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApiId}/*"
-                - WebsocketApiId: !ImportValue WebsocketApiId
+                - WebsocketApiId:
+                    Fn::ImportValue: !Sub "${StackName}-WebsocketApiId"
       Environment:
         Variables:
-          SERVER_CLUSTER_NAME: !ImportValue ServerClusterName
-          SERVER_SERVICE_NAME: !ImportValue ServerServiceName
-          WEBSOCKET_API_ID: !ImportValue WebsocketApiId
+          SERVER_CLUSTER_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ServerClusterName"
+          SERVER_SERVICE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ServerServiceName"
+          WEBSOCKET_API_ID:
+            Fn::ImportValue: !Sub "${StackName}-WebsocketApiId"
           WEBSOCKET_API_STAGE: !Ref DeploymentStage
           DEPLOYMENT_STAGE: !Ref DeploymentStage
-          CONNECTIONS_TABLE_NAME: !ImportValue ConnectionsTableName
-          MATCHMAKING_TICKETS_TABLE_NAME: !ImportValue MatchmakingTicketsTableName
-          USER_MATCHES_TABLE_NAME: !ImportValue UserMatchesTableName
-          ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
+          CONNECTIONS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ConnectionsTableName"
+          MATCHMAKING_TICKETS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchmakingTicketsTableName"
+          USER_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
+          ACTIVE_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
 {{- if .IncludeRankingService }}
-          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
-          MATCH_RESULTS_TABLE_NAME: !ImportValue MatchResultsTableName
+          USER_RATINGS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
+          MATCH_RESULTS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchResultsTableName"
 {{- end }}
 {{- if and .IncludeMatchSpectatingService .IncludeChatService }}
-          SPECTATOR_CONVERSATIONS_TABLE_NAME: !ImportValue SpectatorConversationsTableName
+          SPECTATOR_CONVERSATIONS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
 {{- end }}
       Events:
         ApiEvent:
@@ -133,16 +153,20 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserProfilesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserProfilesTableName"
 {{- if .IncludeRankingService }}
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserRatingsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
 {{- end }}
       Environment:
         Variables:
-          USER_PROFILES_TABLE_NAME: !ImportValue UserProfilesTableName
+          USER_PROFILES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserProfilesTableName"
 {{- if .IncludeRankingService }}
-          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
+          USER_RATINGS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
 {{- end }}
       Events:
         ApiEvent:
@@ -163,10 +187,12 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue MatchRecordsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-MatchRecordsTableName"
       Environment:
         Variables:
-          MATCH_RECORDS_TABLE_NAME: !ImportValue MatchRecordsTableName
+          MATCH_RECORDS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchRecordsTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -187,10 +213,12 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserRatingsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
       Environment:
         Variables:
-          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
+          USER_RATINGS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -210,10 +238,12 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue MatchResultsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-MatchResultsTableName"
       Environment:
         Variables:
-          MATCH_RESULTS_TABLE_NAME: !ImportValue MatchResultsTableName
+          MATCH_RESULTS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchResultsTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -235,10 +265,12 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue MessagesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-MessagesTableName"
       Environment:
         Variables:
-          MESSAGES_TABLE_NAME: !ImportValue MessagesTableName
+          MESSAGES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MessagesTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -259,10 +291,12 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue MatchStatesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-MatchStatesTableName"
       Environment:
         Variables:
-          MATCH_STATES_TABLE_NAME: !ImportValue MatchStatesTableName
+          MATCH_STATES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchStatesTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -282,10 +316,12 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue ActiveMatchesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
       Environment:
         Variables:
-          ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
+          ACTIVE_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -306,9 +342,11 @@ Resources:
       Timeout: 60
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue ActiveMatchesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
         - EcsRunTaskPolicy:
-            TaskDefinition: !ImportValue ServerDefinitionArn
+            TaskDefinition:
+              Fn::ImportValue: !Sub "${StackName}-ServerDefinitionArn"
         - Statement:
             - Effect: Allow
               Action:
@@ -323,9 +361,12 @@ Resources:
               Resource: "*"
       Environment:
         Variables:
-          ECS_CLUSTER_NAME: !ImportValue ServerClusterName
-          ECS_SERVICE_NAME: !ImportValue ServerServiceName
-          ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
+          ECS_CLUSTER_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ServerClusterName"
+          ECS_SERVICE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ServerServiceName"
+          ACTIVE_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -347,16 +388,20 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue MatchStatesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-MatchStatesTableName"
 {{- if .IncludeChatService }}
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue SpectatorConversationsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
 {{- end }}
       Environment:
         Variables:
-          MATCH_STATES_TABLE_NAME: !ImportValue MatchStatesTableName
+          MATCH_STATES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchStatesTableName"
 {{- if .IncludeChatService }}
-          SPECTATOR_CONVERSATIONS_TABLE_NAME: !ImportValue SpectatorConversationsTableName
+          SPECTATOR_CONVERSATIONS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
 {{- end }}
       Events:
         ApiEvent:
@@ -378,10 +423,12 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - S3CrudPolicy:
-            BucketName: !ImportValue ImagesBucketName
+            BucketName:
+              Fn::ImportValue: !Sub "${StackName}-ImagesBucketName"
       Environment:
         Variables:
-          IMAGE_BUCKET_NAME: !ImportValue ImagesBucketName
+          IMAGE_BUCKET_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ImagesBucketName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -402,10 +449,12 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue FriendshipsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-FriendshipsTableName"
       Environment:
         Variables:
-          FRIENDSHIPS_TABLE_NAME: !ImportValue FriendshipsTableName
+          FRIENDSHIPS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-FriendshipsTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -425,10 +474,12 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue FriendshipsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-FriendshipsTableName"
       Environment:
         Variables:
-          FRIENDSHIPS_TABLE_NAME: !ImportValue FriendshipsTableName
+          FRIENDSHIPS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-FriendshipsTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -448,10 +499,12 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue FriendshipsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-FriendshipsTableName"
       Environment:
         Variables:
-          FRIENDSHIPS_TABLE_NAME: !ImportValue FriendshipsTableName
+          FRIENDSHIPS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-FriendshipsTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -471,10 +524,12 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue FriendRequestsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-FriendRequestsTableName"
       Environment:
         Variables:
-          FRIEND_REQUESTS_TABLE_NAME: !ImportValue FriendRequestsTableName
+          FRIEND_REQUESTS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-FriendRequestsTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -494,10 +549,12 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue FriendRequestsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-FriendRequestsTableName"
       Environment:
         Variables:
-          FRIEND_REQUESTS_TABLE_NAME: !ImportValue FriendRequestsTableName
+          FRIEND_REQUESTS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-FriendRequestsTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -517,18 +574,24 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue FriendRequestsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-FriendRequestsTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue FriendshipsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-FriendshipsTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue ApplicationEndpointsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ApplicationEndpointsTableName"
         - SNSPublishMessagePolicy:
             TopicName: "*"
       Environment:
         Variables:
-          FRIEND_REQUESTS_TABLE_NAME: !ImportValue FriendRequestsTableName
-          FRIENDSHIPS_TABLE_NAME: !ImportValue FriendshipsTableName
-          APPLICATION_ENDPOINTS_TABLE_NAME: !ImportValue ApplicationEndpointsTableName
+          FRIEND_REQUESTS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-FriendRequestsTableName"
+          FRIENDSHIPS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-FriendshipsTableName"
+          APPLICATION_ENDPOINTS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ApplicationEndpointsTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -548,13 +611,17 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue FriendRequestsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-FriendRequestsTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue FriendshipsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-FriendshipsTableName"
       Environment:
         Variables:
-          FRIEND_REQUESTS_TABLE_NAME: !ImportValue FriendRequestsTableName
-          FRIENDSHIPS_TABLE_NAME: !ImportValue FriendshipsTableName
+          FRIEND_REQUESTS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-FriendRequestsTableName"
+          FRIENDSHIPS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-FriendshipsTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -574,10 +641,12 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue FriendRequestsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-FriendRequestsTableName"
       Environment:
         Variables:
-          FRIEND_REQUESTS_TABLE_NAME: !ImportValue FriendRequestsTableName
+          FRIEND_REQUESTS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-FriendRequestsTableName"
       Events:
         ApiEvent:
           Type: HttpApi
@@ -591,4 +660,4 @@ Outputs:
   HttpApiEndpoint:
     Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}"
     Export:
-      Name: HttpApiEndpoint
+      Name: !Sub "${StackName}-HttpApiEndpoint"

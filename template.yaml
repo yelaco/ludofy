@@ -102,7 +102,7 @@ Resources:
           - Type: VCPU
             Value: "1"
           - Type: MEMORY
-            Value: "2048"
+            Value: "4096"
         ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
         JobRoleArn: !GetAtt DeployJobRole.Arn
         NetworkConfiguration:
@@ -154,18 +154,86 @@ Resources:
               Service: ecs-tasks.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: BatchJobTaskInlinePolicy
+        - PolicyName: DeployJobInlinePolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
+              # CloudFormation permissions to manage stacks
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:UpdateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:GetTemplate
+                Resource: "*"
+
+              # S3 permissions to upload SAM artifacts (Lambda zips, etc.)
               - Effect: Allow
                 Action:
                   - s3:GetObject
-                  - s3:ListBucket
                   - s3:PutObject
+                  - s3:ListBucket
+                  - s3:CreateBucket
+                Resource: "*"
+
+              # IAM permissions if your SAM template creates Lambda execution roles
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                  - iam:CreateRole
+                  - iam:AttachRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:CreatePolicy
+                Resource: "*"
+
+              # Lambda permissions if you deploy serverless functions
+              - Effect: Allow
+                Action:
+                  - lambda:CreateFunction
+                  - lambda:UpdateFunctionCode
+                  - lambda:UpdateFunctionConfiguration
+                  - lambda:DeleteFunction
+                  - lambda:GetFunction
+                Resource: "*"
+
+              # API Gateway permissions if you deploy APIs
+              - Effect: Allow
+                Action:
+                  - apigateway:POST
+                  - apigateway:PUT
+                  - apigateway:PATCH
+                  - apigateway:DELETE
+                  - apigateway:GET
+                Resource: "*"
+
+              # DynamoDB permissions (keep your previous ones)
+              - Effect: Allow
+                Action:
                   - dynamodb:GetItem
                   - dynamodb:PutItem
-                  # Add whatever permissions your Batch job needs
+                Resource: "*"
+
+              # CloudWatch Logs permissions for function logs
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DeleteLogGroup
+                  - logs:PutRetentionPolicy
+                Resource: "*"
+
+              # AWS Batch permissions (if needed for submitting batch jobs inside deployment flow)
+              - Effect: Allow
+                Action:
+                  - batch:SubmitJob
+                  - batch:DescribeJobs
+                  - batch:TerminateJob
                 Resource: "*"
 
   ### HTTP API Gateway ###

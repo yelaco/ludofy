@@ -19,7 +19,8 @@ Resources:
         Type: AMAZON_COGNITO_USER_POOLS
         UserPool:
           AwsRegion: !Ref AWS::Region
-          UserPoolId: !ImportValue UserPoolId
+          UserPoolId:
+            Fn::ImportValue: !Sub "${StackName}-UserPoolId"
           DefaultAction: ALLOW
         Additional:
           - Type: AWS_IAM
@@ -31,7 +32,8 @@ Resources:
       Name: MatchStatesDataSource
       Type: AMAZON_DYNAMODB
       DynamoDBConfig:
-        TableName: !ImportValue MatchStatesTableName
+        TableName:
+          Fn::ImportValue: !Sub "${StackName}-MatchStatesTableName"
         AwsRegion: !Ref AWS::Region
       ServiceRoleArn: !GetAtt AppSyncRole.Arn
 
@@ -98,7 +100,8 @@ Resources:
       Name: MessagesDataSource
       Type: AMAZON_DYNAMODB
       DynamoDBConfig:
-        TableName: !ImportValue MessagesTableName
+        TableName:
+          Fn::ImportValue: !Sub "${StackName}-MessagesTableName"
         AwsRegion: !Ref AWS::Region
       ServiceRoleArn: !GetAtt AppSyncRole.Arn
 
@@ -149,10 +152,10 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:Scan
                 Resource:
-                  - !ImportValue MatchStatesTableArn
-{{- if .IncludeChatService }}
-                  - !ImportValue MessagesTableArn
-{{- end }}
+                  - Fn::ImportValue: !Sub "${StackName}-MatchStatesTableArn"
+                  {{- if .IncludeChatService }}
+                  - Fn::ImportValue: !Sub "${StackName}-MessagesTableArn"
+  {{- end }}
 
   AppSyncAccessRole:
     Type: AWS::IAM::Role
@@ -178,14 +181,14 @@ Outputs:
   AppSyncGraphQLApiUrl:
     Value: !GetAtt AppSyncApi.GraphQLUrl
     Export:
-      Name: AppSyncGraphQLApiUrl
+      Name: !Sub "${StackName}-AppSyncGraphQLApiUrl"
 
   AppSyncRealtimeApiUrl:
     Value: !GetAtt AppSyncApi.RealtimeUrl
     Export:
-      Name: AppSyncRealtimeApiUrl
+      Name: !Sub "${StackName}-AppSyncRealtimeApiUrl"
 
   AppSyncApiArn:
     Value: !Ref AppSyncApi
     Export:
-      Name: AppSyncApiArn
+      Name: !Sub "${StackName}-AppSyncApiArn"

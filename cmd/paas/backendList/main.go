@@ -35,6 +35,7 @@ func handler(
 
 	startKey, limit, err := extractParameters(
 		event.QueryStringParameters,
+		userId,
 	)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
@@ -55,7 +56,9 @@ func handler(
 
 	resp := dtos.BackendListResponseFromEntities(backends)
 	if lastEvalKey != nil {
-		resp.NextPageToken = &dtos.NextBackendPageToken{}
+		resp.NextPageToken = &dtos.NextBackendPageToken{
+			Id: lastEvalKey["Id"].(*types.AttributeValueMemberS).Value,
+		}
 		fmt.Println(lastEvalKey)
 	}
 
@@ -74,6 +77,7 @@ func handler(
 
 func extractParameters(
 	params map[string]string,
+	userId string,
 ) (
 	map[string]types.AttributeValue,
 	int32,
@@ -98,14 +102,14 @@ func extractParameters(
 		); err != nil {
 			return nil, 0, err
 		}
-		// startKey = map[string]types.AttributeValue{
-		// 	"UserId": &types.AttributeValueMemberS{
-		// 		Value: userId,
-		// 	},
-		// 	"FriendId": &types.AttributeValueMemberS{
-		// 		Value: nextPageToken.FriendId,
-		// 	},
-		// }
+		startKey = map[string]types.AttributeValue{
+			"UserId": &types.AttributeValueMemberS{
+				Value: userId,
+			},
+			"Id": &types.AttributeValueMemberS{
+				Value: nextPageToken.Id,
+			},
+		}
 	}
 
 	return startKey, int32(limit), nil

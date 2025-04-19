@@ -23,7 +23,9 @@ type DeploymentListResponse struct {
 	NextPageToken *NextDeploymentPageToken `json:"nextPageToken"`
 }
 
-type NextDeploymentPageToken struct{}
+type NextDeploymentPageToken struct {
+	Id string `json:"id"`
+}
 
 func DeploymentListResponseFromEntities(deployments []entities.Deployment) DeploymentListResponse {
 	deploymentList := []DeploymentResponse{}

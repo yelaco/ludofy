@@ -105,7 +105,7 @@ Resources:
                 Action: appsync:GraphQL
                 Resource: !Sub
                   - "${ApiArn}/*"
-                  - ApiArn: !ImportValue AppSyncApiArn
+                  - ApiArn: Fn::ImportValue: !Sub "${StackName}-AppSyncApiArn"
         - PolicyName: DynamoDBAccessPolicy
           PolicyDocument:
             Version: "2012-10-17"
@@ -117,15 +117,15 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                 Resource:
-                  - !ImportValue UserMatchesTableArn
-                  - !ImportValue ActiveMatchesTableArn
+                  - Fn::ImportValue: !Sub "${StackName}-UserMatchesTableArn"
+                  - Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableArn"
 {{- if and .IncludeMatchSpectatingService .IncludeChatService }}
-                  - !ImportValue SpectatorConversationsTableArn
+                  - Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableArn"
 {{- end }}
-                  - !ImportValue MatchStatesTableArn
+                  - Fn::ImportValue: !Sub "${StackName}-MatchStatesTableArn"
                   - !Sub
                     - "${MatchStatesTableArn}/index/MatchIndex"
-                    - MatchStatesTableArn: !ImportValue MatchStatesTableArn
+                    - MatchStatesTableArn: Fn::ImportValue: !Sub "${StackName}-MatchStatesTableArn"
         - PolicyName: ECSTaskProtectionPolicy
           PolicyDocument:
             Version: "2012-10-17"
@@ -207,33 +207,46 @@ Resources:
       Timeout: 10
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserMatchesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue ActiveMatchesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue MatchRecordsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-MatchRecordsTableName"
 {{- if .IncludeRankingService }}
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue MatchResultsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-MatchResultsTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserRatingsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
 {{- end }}
 {{- if and .IncludeMatchSpectatingService .IncludeChatService }}
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue SpectatorConversationsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
 {{- end }}
       Environment:
         Variables:
-          USER_MATCHES_TABLE_NAME: !ImportValue UserMatchesTableName
-          ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
-          MATCH_STATES_TABLE_NAME: !ImportValue MatchStatesTableName
-          MATCH_RECORDS_TABLE_NAME: !ImportValue MatchRecordsTableName
+          USER_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
+          ACTIVE_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
+          MATCH_STATES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchStatesTableName"
+          MATCH_RECORDS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchRecordsTableName"
 {{- if .IncludeRankingService }}
-          MATCH_RESULTS_TABLE_NAME: !ImportValue MatchResultsTableName
-          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
+          MATCH_RESULTS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchResultsTableName"
+          USER_RATINGS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
 {{- end }}
 {{- if and .IncludeMatchSpectatingService .IncludeChatService }}
-          SPECTATOR_CONVERSATIONS_TABLE_NAME: !ImportValue SpectatorConversationsTableName
+          SPECTATOR_CONVERSATIONS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
 {{- end }}
 
   AbortGameFunction:
@@ -248,33 +261,39 @@ Resources:
       Timeout: 10
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserMatchesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue ActiveMatchesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
 {{- if and .IncludeMatchSpectatingService .IncludeChatService }}
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue SpectatorConversationsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
 {{- end }}
       Environment:
         Variables:
-          USER_MATCHES_TABLE_NAME: !ImportValue UserMatchesTableName
-          ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
+          USER_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
+          ACTIVE_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
 {{- if and .IncludeMatchSpectatingService .IncludeChatService }}
-          SPECTATOR_CONVERSATIONS_TABLE_NAME: !ImportValue SpectatorConversationsTableName
+          SPECTATOR_CONVERSATIONS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
 {{- end }}
 
 Outputs:
   ServerClusterName:
     Value: !Ref ServerCluster
     Export:
-      Name: ServerClusterName
+      Name: !Sub "${StackName}-ServerClusterName"
 
   ServerServiceName:
     Value: !GetAtt ServerService.Name
     Export:
-      Name: ServerServiceName
+      Name: !Sub "${StackName}-ServerServiceName"
 
   ServerDefinitionArn:
     Value: !Ref ServerDefinition
     Export:
-      Name: ServerDefinitionArn
+      Name: !Sub "${StackName}-ServerDefinitionArn"

@@ -12,7 +12,9 @@ type BackendListResponse struct {
 	NextPageToken *NextBackendPageToken `json:"nextPageToken"`
 }
 
-type NextBackendPageToken struct{}
+type NextBackendPageToken struct {
+	Id string `json:"id"`
+}
 
 func BackendListResponseFromEntities(backends []entities.Backend) BackendListResponse {
 	matchResultList := []BackendResponse{}

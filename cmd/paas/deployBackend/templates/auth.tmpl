@@ -69,18 +69,23 @@ Resources:
       Policies:
         - AWSLambdaBasicExecutionRole
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserProfilesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserProfilesTableName"
 {{- if .IncludeRankingService }}
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserRatingsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
 {{- end }}
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue PuzzleProfilesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-PuzzleProfilesTableName"
       Environment:
         Variables:
-          USER_PROFILES_TABLE_NAME: !ImportValue UserProfilesTableName
+          USER_PROFILES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserProfilesTableName"
 {{- if .IncludeRankingService }}
-          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
+          USER_RATINGS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
 {{- end }}
 
   PostUserConfirmationPermission:
@@ -95,9 +100,9 @@ Outputs:
   UserPoolId:
     Value: !Ref UserPool
     Export:
-      Name: UserPoolId
+      Name: !Sub "${StackName}-UserPoolId"
 
   UserPoolClientId:
     Value: !Ref UserPoolClient
     Export:
-      Name: UserPoolClientId
+      Name: !Sub "${StackName}-UserPoolClientId"

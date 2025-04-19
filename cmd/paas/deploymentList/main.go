@@ -35,6 +35,7 @@ func handler(
 
 	startKey, limit, err := extractParameters(
 		event.QueryStringParameters,
+		userId,
 	)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
@@ -55,7 +56,9 @@ func handler(
 
 	resp := dtos.DeploymentListResponseFromEntities(deployments)
 	if lastEvalKey != nil {
-		resp.NextPageToken = &dtos.NextDeploymentPageToken{}
+		resp.NextPageToken = &dtos.NextDeploymentPageToken{
+			Id: lastEvalKey["Id"].(*types.AttributeValueMemberS).Value,
+		}
 		fmt.Println(lastEvalKey)
 	}
 
@@ -74,6 +77,7 @@ func handler(
 
 func extractParameters(
 	params map[string]string,
+	userId string,
 ) (
 	map[string]types.AttributeValue,
 	int32,
@@ -91,21 +95,21 @@ func extractParameters(
 	// Check for startKey (optional)
 	var startKey map[string]types.AttributeValue
 	if startKeyStr, ok := params["startKey"]; ok {
-		var nextPageToken dtos.NextBackendPageToken
+		var nextPageToken dtos.NextDeploymentPageToken
 		if err := json.Unmarshal(
 			[]byte(startKeyStr),
 			&nextPageToken,
 		); err != nil {
 			return nil, 0, err
 		}
-		// startKey = map[string]types.AttributeValue{
-		// 	"UserId": &types.AttributeValueMemberS{
-		// 		Value: userId,
-		// 	},
-		// 	"FriendId": &types.AttributeValueMemberS{
-		// 		Value: nextPageToken.FriendId,
-		// 	},
-		// }
+		startKey = map[string]types.AttributeValue{
+			"UserId": &types.AttributeValueMemberS{
+				Value: userId,
+			},
+			"Id": &types.AttributeValueMemberS{
+				Value: nextPageToken.Id,
+			},
+		}
 	}
 
 	return startKey, int32(limit), nil
