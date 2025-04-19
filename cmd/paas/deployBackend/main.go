@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/batch"
 	"github.com/aws/aws-sdk-go-v2/service/batch/types"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/chess-vn/slchess/internal/paas/aws/auth"
 	"github.com/chess-vn/slchess/internal/paas/aws/storage"
@@ -48,7 +49,10 @@ var (
 
 func init() {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
-	storageClient = storage.NewClient(nil, s3.NewFromConfig(cfg))
+	storageClient = storage.NewClient(
+		dynamodb.NewFromConfig(cfg),
+		s3.NewFromConfig(cfg),
+	)
 	batchClient = batch.NewFromConfig(cfg)
 
 	batchJobName = os.Getenv("BATCH_JOB_NAME")
@@ -134,7 +138,7 @@ func handler(
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-		}, fmt.Errorf("failed to submit batch job: %w", err)
+		}, fmt.Errorf("failed to submit deploy job: %w", err)
 	}
 
 	deployment := entities.Deployment{
