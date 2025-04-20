@@ -32,13 +32,39 @@ func (client *Client) GetBackend(
 		return entities.Backend{}, err
 	}
 	if output.Item == nil {
-		return entities.Backend{}, ErrDeploymentNotFound
+		return entities.Backend{}, ErrBackendNotFound
 	}
 	var backend entities.Backend
 	if err := attributevalue.UnmarshalMap(output.Item, &backend); err != nil {
 		return entities.Backend{}, err
 	}
 	return backend, nil
+}
+
+func (client *Client) CheckExistedBackendStack(
+	ctx context.Context,
+	userId string,
+	stackName string,
+) (
+	bool,
+	error,
+) {
+	output, err := client.dynamodb.Query(ctx, &dynamodb.QueryInput{
+		TableName:              client.cfg.BackendsTableName,
+		IndexName:              aws.String("UserIndex"),
+		KeyConditionExpression: aws.String("UserId = :userId"),
+		FilterExpression:       aws.String("StackName = :stackName"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":userId":    &types.AttributeValueMemberS{Value: userId},
+			":stackName": &types.AttributeValueMemberS{Value: stackName},
+		},
+		ProjectionExpression: aws.String("Id"),
+		Limit:                aws.Int32(1),
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to query backend: %w", err)
+	}
+	return len(output.Items) > 0, nil
 }
 
 func (client *Client) FetchBackends(

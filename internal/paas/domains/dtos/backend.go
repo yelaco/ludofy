@@ -1,12 +1,17 @@
 package dtos
 
-import "github.com/chess-vn/slchess/internal/paas/domains/entities"
+import (
+	"time"
+
+	"github.com/chess-vn/slchess/internal/paas/domains/entities"
+)
 
 type BackendResponse struct {
 	Id        string            `json:"id"`
 	UserId    string            `json:"userId"`
 	StackName string            `json:"stackName"`
 	Outputs   map[string]string `json:"outputs"`
+	CreatedAt time.Time         `json:"createdAt"`
 }
 
 type BackendListResponse struct {
@@ -33,5 +38,6 @@ func BackendResponseFromEntity(backend entities.Backend) BackendResponse {
 		Id:        backend.Id,
 		UserId:    backend.UserId,
 		StackName: backend.StackName,
+		CreatedAt: backend.CreatedAt,
 	}
 }

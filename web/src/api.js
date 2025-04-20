@@ -1,0 +1,43 @@
+import axios from "axios";
+import { userManager } from "@/auth"; // Assuming you already have this
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+const api = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// Interceptor to add Authorization header dynamically
+api.interceptors.request.use(
+  async (config) => {
+    const user = await userManager.getUser();
+    if (user && user.id_token) {
+      config.headers["Authorization"] = `${user.id_token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  },
+);
+
+export default {
+  getDeployments() {
+    return api.get("/deployments");
+  },
+  deployBackend(data) {
+    return api.post("/deploy", data);
+  },
+  getBackend(id) {
+    return api.get(`/backend/${id}`);
+  },
+  getBackends() {
+    return api.get("/backends");
+  },
+  getDeployment(id) {
+    return api.get(`/deployment/${id}`);
+  },
+};

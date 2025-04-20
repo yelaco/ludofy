@@ -47,6 +47,15 @@
       <h2 class="text-xl font-semibold mb-2">🖥️ Server Configuration</h2>
       <div class="space-y-4">
         <div>
+          <label class="block text-sm font-medium">Server Image URI</label>
+          <input
+            type="text"
+            v-model="serverImageUri"
+            class="input"
+            placeholder="e.g., 123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/mygame-server:latest"
+          />
+        </div>
+        <div>
           <label class="block text-sm font-medium">Initial vCPU</label>
           <select v-model="server.cpu" class="input">
             <option :value="0.25">0.25</option>
@@ -76,7 +85,7 @@
     <hr class="my-8" />
 
     <button
-      @click="deployBackend"
+      @click="submit"
       class="w-full px-6 py-3 bg-green-600 text-white font-semibold rounded-lg text-lg hover:bg-green-700 shadow-md"
     >
       🚀 Deploy
@@ -88,6 +97,10 @@
 import { ref, computed, watch } from "vue";
 import BackendForm from "@/components/BackendForm.vue";
 import ServiceSelector from "@/components/ServiceSelector.vue";
+import api from "@/api";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
 
 const stackName = ref("");
 const services = ref({
@@ -107,6 +120,7 @@ const server = ref({
   cpu: 0.5,
   memory: 1024,
 });
+const serverImageUri = ref("");
 
 // Compute allowed memory options based on selected CPU
 const allowedMemoryOptions = computed(() => {
@@ -137,14 +151,30 @@ watch(
   },
 );
 
-function deployBackend() {
-  const data = {
-    stackName: stackName.value,
-    services: services.value,
-    matchmaking: matchmaking.value,
-    server: server.value,
-  };
-  console.log("Deploying backend with configuration:", data);
+async function submit() {
+  try {
+    const deployInput = {
+      stackName: stackName.value,
+      serverImageUri: serverImageUri.value,
+      includeChatService: services.value.chat,
+      includeFriendService: services.value.friend,
+      includeRankingService: services.value.ranking,
+      includeMatchSpectatingService: services.value.matchSpectating,
+      matchmakingConfiguration: {
+        matchSize: matchmaking.value.matchSize,
+        ratingAlgorithm: matchmaking.value.ratingAlgorithm,
+        initialRating: matchmaking.value.initialRating,
+      },
+      serverConfiguration: {
+        initialCpu: server.value.cpu,
+        initialMemory: server.value.memory,
+      },
+    };
+    await api.deployBackend(deployInput);
+    router.push("/deployments");
+  } catch (error) {
+    console.error("Failed to deploy backend", error);
+  }
 }
 </script>
 

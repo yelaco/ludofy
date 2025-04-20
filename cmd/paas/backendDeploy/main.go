@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -76,7 +77,26 @@ func handler(
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-		}, fmt.Errorf("failed to unmarshal body: %w", err)
+		}, fmt.Errorf("failed to unmarshal input: %w", err)
+	}
+
+	exist, err := storageClient.CheckExistedBackendStack(ctx, userId, input.StackName)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+		}, fmt.Errorf("failed to check existed backend stack: %w", err)
+	}
+	if exist {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusFound,
+			Body:       "Stack with selected name already existed",
+		}, nil
+	}
+
+	funcMap := template.FuncMap{
+		"mul": func(a float64, b int) int {
+			return int(a * float64(b))
+		},
 	}
 
 	for _, stack := range stacks {
@@ -88,7 +108,7 @@ func handler(
 		}
 
 		// Parse the template
-		t := template.Must(template.New(stack).Parse(string(tmplContent)))
+		t := template.Must(template.New(stack).Funcs(funcMap).Parse(string(tmplContent)))
 
 		buf := new(bytes.Buffer)
 		err = t.Execute(buf, input)
@@ -149,8 +169,9 @@ func handler(
 		Id:        deploymentId,
 		UserId:    userId,
 		BackendId: backendId,
-		StackName: input.StackName,
 		Status:    "pending",
+		Input:     dtos.DeployInputRequestToEntity(input),
+		CreatedAt: time.Now(),
 	}
 	if err := storageClient.PutDeployment(ctx, deployment); err != nil {
 		return events.APIGatewayProxyResponse{

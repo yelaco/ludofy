@@ -5,7 +5,7 @@ version: 0.1
 default:
   global:
     parameters:
-      stack_name: slchess
+      stack_name: ludofy
   build:
     parameters:
       cached: true
@@ -17,11 +17,11 @@ default:
         - CAPABILITY_AUTO_EXPAND
       confirm_changeset: true
       resolve_s3: true
-      s3_prefix: slchess
+      s3_prefix: ludofy
       region: ap-southeast-2
       image_repositories: []
       disable_rollback: true
-      parameter_overrides: ServerImageUri=""
+      parameter_overrides: DeployJobImageUri=""
   sync:
     parameters:
       watch: true

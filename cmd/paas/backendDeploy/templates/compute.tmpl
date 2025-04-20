@@ -32,8 +32,8 @@ Resources:
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
-      Cpu: "256"
-      Memory: "512"
+      Cpu: {{ mul .ServerConfiguration.InitialCpu 1024 }}
+      Memory: {{ .ServerConfiguration.InitialMemory }}
       ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
       TaskRoleArn: !GetAtt ServerRole.Arn
       ContainerDefinitions:

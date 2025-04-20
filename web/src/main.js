@@ -1,6 +1,12 @@
+import "@/style.css";
+
 import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./router";
-import "./style.css";
+import { handleAuthRedirect } from "@/auth"; // ⬅️ import the handler
 
-createApp(App).use(router).mount("#app");
+await handleAuthRedirect(); // ⬅️ Important! complete login before mounting
+
+const app = createApp(App);
+app.use(router);
+app.mount("#app");

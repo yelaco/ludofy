@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -72,6 +73,45 @@ func (client *Client) FetchDeployments(
 		return nil, nil, err
 	}
 	return deployments, output.LastEvaluatedKey, nil
+}
+
+type DeploymentUpdateOptions struct {
+	Status *string
+}
+
+func (client *Client) UpdateDeployment(
+	ctx context.Context,
+	deploymentId string,
+	opts DeploymentUpdateOptions,
+) error {
+	updateExpression := []string{}
+	expressionAttributeValues := map[string]types.AttributeValue{}
+	expressionAttributeNames := map[string]string{}
+
+	if opts.Status != nil {
+		updateExpression = append(updateExpression, "#stat = :stat")
+		expressionAttributeValues[":stat"] = &types.AttributeValueMemberS{
+			Value: *opts.Status,
+		}
+		expressionAttributeNames["#stat"] = "Status"
+	}
+
+	_, err := client.dynamodb.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName: client.cfg.DeploymentsTableName,
+		Key: map[string]types.AttributeValue{
+			"Id": &types.AttributeValueMemberS{
+				Value: deploymentId,
+			},
+		},
+		UpdateExpression:          aws.String("SET " + strings.Join(updateExpression, ", ")),
+		ExpressionAttributeValues: expressionAttributeValues,
+		ExpressionAttributeNames:  expressionAttributeNames,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (client *Client) PutDeployment(

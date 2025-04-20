@@ -5,15 +5,12 @@
     <!-- Sidebar -->
     <aside
       :class="[
-        'bg-white dark:bg-gray-800 dark:border-gray-700 h-screen border-r shadow-sm overflow-hidden transition-all duration-300 ease-in-out',
+        'bg-white dark:bg-gray-800 dark:border-gray-700 min-h-full border-r shadow-sm overflow-hidden transition-all duration-300 ease-in-out',
         collapsed ? 'w-16' : 'w-64',
       ]"
     >
-      <!-- Sidebar Header -->
       <div class="h-16 flex items-center px-4">
-        <!-- Expanded state -->
         <template v-if="!collapsed">
-          <!-- Centered logo text in the available space -->
           <div class="flex-1 flex justify-center">
             <RouterLink
               to="/"
@@ -22,8 +19,6 @@
               🎮 Ludofy
             </RouterLink>
           </div>
-
-          <!-- Collapse button on the right -->
           <button
             @click="toggleSidebar"
             class="text-gray-600 hover:text-black dark:text-gray-300 dark:hover:text-white"
@@ -31,8 +26,6 @@
             <component :is="icons.ChevronLeft" class="w-5 h-5" />
           </button>
         </template>
-
-        <!-- Collapsed state -->
         <template v-else>
           <div class="w-full flex justify-center">
             <button
@@ -49,13 +42,19 @@
         <SidebarLink to="/" icon="Home" label="Home" :collapsed="collapsed" />
         <SidebarLink
           to="/deploy"
-          icon="PlusSquare"
+          icon="Upload"
           label="Deploy Backend"
           :collapsed="collapsed"
         />
         <SidebarLink
+          to="/backends"
+          icon="Layers"
+          label="Backends"
+          :collapsed="collapsed"
+        />
+        <SidebarLink
           to="/deployments"
-          icon="Server"
+          icon="Box"
           label="Deployments"
           :collapsed="collapsed"
         />
@@ -68,7 +67,6 @@
       </nav>
     </aside>
 
-    <!-- Main content -->
     <div class="flex-1 flex flex-col">
       <header
         class="bg-white dark:bg-gray-800 px-6 py-3 border-b shadow flex justify-between items-center dark:border-gray-700"
@@ -81,7 +79,6 @@
         </RouterLink>
 
         <div class="flex items-center gap-4">
-          <!-- Notifications Icon -->
           <button
             class="relative text-gray-500 hover:text-blue-600 dark:text-gray-300"
           >
@@ -91,17 +88,15 @@
             ></span>
           </button>
 
-          <!-- User Profile -->
-          <div
-            class="relative"
-            @mouseenter="showDropdown = true"
-            @mouseleave="showDropdown = false"
-          >
+          <div class="relative">
             <button
+              @click="toggleDropdown"
               class="flex items-center gap-2 text-gray-700 dark:text-white"
             >
               <component :is="icons.User" class="w-5 h-5" />
-              <span v-if="!collapsed" class="text-sm font-medium">me</span>
+              <span v-if="!collapsed" class="text-sm font-medium">{{
+                userEmail
+              }}</span>
             </button>
             <div
               v-if="showDropdown"
@@ -110,13 +105,15 @@
               <a
                 href="#"
                 class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600"
-                >Profile</a
               >
-              <a
-                href="#"
-                class="block px-4 py-2 text-red-500 hover:bg-red-50 dark:hover:bg-gray-600"
-                >Logout</a
+                Profile
+              </a>
+              <button
+                @click="logout"
+                class="w-full text-left block px-4 py-2 text-red-500 hover:bg-red-50 dark:hover:bg-gray-600"
               >
+                Logout
+              </button>
             </div>
           </div>
         </div>
@@ -130,12 +127,13 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, watch, onMounted } from "vue";
+import { signOutRedirect } from "@/auth";
+import { userManager } from "@/auth";
 import SidebarLink from "./SidebarLink.vue";
 import { RouterView } from "vue-router";
 import * as icons from "lucide-vue-next";
 
-// --- Persistent collapsed state ---
 const COLLAPSE_KEY = "ludofy-sidebar-collapsed";
 const collapsed = ref(localStorage.getItem(COLLAPSE_KEY) === "true");
 
@@ -147,6 +145,31 @@ function toggleSidebar() {
   collapsed.value = !collapsed.value;
 }
 
-// Profile dropdown
 const showDropdown = ref(false);
+const userEmail = ref("me");
+
+function toggleDropdown() {
+  showDropdown.value = !showDropdown.value;
+}
+
+async function logout() {
+  try {
+    await userManager.removeUser();
+    await signOutRedirect();
+    console.log("Signed out successfully");
+  } catch (error) {
+    console.error("Error during logout:", error);
+  }
+}
+
+onMounted(async () => {
+  try {
+    const user = await userManager.getUser();
+    if (user && user.profile && user.profile.email) {
+      userEmail.value = user.profile.email;
+    }
+  } catch (error) {
+    console.error("Failed to fetch user profile:", error);
+  }
+});
 </script>

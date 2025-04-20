@@ -185,10 +185,10 @@ Resources:
                   - application-autoscaling:*
                 Resource: "*"
 
-  BackendDeploySuccessRule:
+  PostBackendDeployRule:
     Type: AWS::Events::Rule
     Properties:
-      Name: BackendDeploySuccessRule
+      Name: !Sub "${StackName}-PostBackendDeployRule"
       EventPattern:
         source:
           - aws.batch
@@ -197,32 +197,33 @@ Resources:
         detail:
           status:
             - SUCCEEDED
+            - FAILED
           jobName:
             - backend-deploy-job
       Targets:
-        - Arn: !GetAtt BackendPutFunction.Arn
-          Id: BackendPutTarget
+        - Arn: !GetAtt PostBackendDeployFunction.Arn
+          Id: PostBackendDeployTarget
           InputTransformer:
             InputPathsMap:
               jobName: "$.detail.jobName"
               jobId: "$.detail.jobId"
               jobQueue: "$.detail.jobQueue"
-              deploymentId: "$.detail.tags.deploymentId"
+              status: "$.detail.status"
             InputTemplate: |
               {
                 "jobName": "<jobName>",
                 "jobId": "<jobId>",
                 "jobQueue": "<jobQueue>",
-                "deploymentId": "<deploymentId>"
+                "status": "<status>"
               }
 
   PermissionForEventsToInvokeLambda:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !GetAtt BackendPutFunction.Arn
+      FunctionName: !GetAtt PostBackendDeployFunction.Arn
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
-      SourceArn: !GetAtt BackendDeploySuccessRule.Arn
+      SourceArn: !GetAtt PostBackendDeployRule.Arn
 
   ### HTTP API Gateway ###
   HttpApi:
@@ -235,6 +236,7 @@ Resources:
         AllowOrigins: ["*"]
         AllowHeaders:
           - Authorization
+          - Content-Type
         AllowMethods:
           - GET
           - POST
@@ -268,9 +270,12 @@ Resources:
             - Effect: Allow
               Action:
                 - batch:SubmitJob
+                - batch:TagResource
               Resource: "*"
         - DynamoDBCrudPolicy:
             TableName: !Ref Deployments
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Backends
       Environment:
         Variables:
           MAIN_BUCKET_NAME: !Ref StackName
@@ -278,6 +283,7 @@ Resources:
           BATCH_JOB_QUEUE: !Ref BatchJobQueue
           BATCH_JOB_DEFINITION: !Ref BatchJobDefinition
           DEPLOYMENTS_TABLE_NAME: !Ref Deployments
+          BACKENDS_TABLE_NAME: !Ref Backends
       Events:
         ApiEvent:
           Type: HttpApi
@@ -286,13 +292,13 @@ Resources:
             Method: POST
             ApiId: !Ref HttpApi
 
-  BackendPutFunction:
+  PostBackendDeployFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      FunctionName: !Sub "${StackName}-${DeploymentStage}-BackendPut"
-      CodeUri: ./cmd/paas/backendPut/
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-PostBackendDeploy"
+      CodeUri: ./cmd/paas/postBackendDeploy/
       Handler: bootstrap
       Runtime: provided.al2023
       Timeout: 10
@@ -301,6 +307,11 @@ Resources:
             TableName: !Ref Deployments
         - DynamoDBCrudPolicy:
             TableName: !Ref Backends
+        - Statement:
+            - Effect: Allow
+              Action:
+                - batch:DescribeJobs
+              Resource: "*"
       Environment:
         Variables:
           DEPLOYMENTS_TABLE_NAME: !Ref Deployments
@@ -318,6 +329,7 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref Backends
+        - CloudFormationDescribeStacksPolicy: {}
       Environment:
         Variables:
           BACKENDS_TABLE_NAME: !Ref Backends

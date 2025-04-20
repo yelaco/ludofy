@@ -59,7 +59,6 @@ func handler(
 		resp.NextPageToken = &dtos.NextDeploymentPageToken{
 			Id: lastEvalKey["Id"].(*types.AttributeValueMemberS).Value,
 		}
-		fmt.Println(lastEvalKey)
 	}
 
 	respJson, err := json.Marshal(resp)
