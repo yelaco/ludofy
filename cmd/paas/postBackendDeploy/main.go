@@ -40,7 +40,7 @@ func handler(ctx context.Context, event dtos.BackendDeployEvent) error {
 
 	deploymentId, ok := output.Jobs[0].Tags["deploymentId"]
 	if !ok {
-		return fmt.Errorf("deploymentId not found for job with id: %s", event.JobId)
+		return fmt.Errorf("deployment id not found for job with id: %s", event.JobId)
 	}
 
 	status := "failed"

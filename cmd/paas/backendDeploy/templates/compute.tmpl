@@ -60,9 +60,8 @@ Resources:
               Value: !Ref AWS::Region
             - Name: ECS_ENABLE_CONTAINER_METADATA
               Value: "true"
-          Secrets:
-            - Name: MAX_MATCHES
-              ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${StackName}/server/max-matches"
+			- Name: MAX_MATCHES
+              Value: {{ .ServerConfiguration.MaxMatches }}
 
   ### ECS Service ###
   ServerService:

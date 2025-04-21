@@ -24,6 +24,7 @@ type MatchmakingConfigurationInput struct {
 
 type ServerConfigurationInput struct {
 	ContainerImage ContainerImageInput `json:"containerImage"`
+	MaxMatches     int                 `json:"maxMatches"`
 	InitialCpu     float64             `json:"initialCpu"`
 	InitialMemory  int                 `json:"initialMemory"`
 }
@@ -93,6 +94,7 @@ func DeploymentResponseFromEntity(deployment entities.Deployment) DeploymentResp
 						Password: deployment.Input.ServerConfiguration.ContainerImage.RegistryCredentials.Password,
 					},
 				},
+				MaxMatches:    deployment.Input.ServerConfiguration.MaxMatches,
 				InitialCpu:    deployment.Input.ServerConfiguration.InitialCpu,
 				InitialMemory: deployment.Input.ServerConfiguration.InitialMemory,
 			},
@@ -122,6 +124,7 @@ func DeployInputRequestToEntity(input DeployInput) entities.DeployInput {
 					Password: input.ServerConfiguration.ContainerImage.RegistryCredentials.Password,
 				},
 			},
+			MaxMatches:    input.ServerConfiguration.MaxMatches,
 			InitialCpu:    input.ServerConfiguration.InitialCpu,
 			InitialMemory: input.ServerConfiguration.InitialMemory,
 		},

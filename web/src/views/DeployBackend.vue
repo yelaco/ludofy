@@ -86,7 +86,19 @@
           </div>
         </template>
         <div>
-          <label class="block text-sm font-medium">Initial vCPU</label>
+          <label class="block text-sm font-medium"
+            >Max Concurrent Matches (Per Server)</label
+          >
+          <input
+            type="number"
+            v-model="server.maxMatches"
+            class="input"
+            min="2"
+            placeholder="100"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Processor (vCPU)</label>
           <select v-model="server.cpu" class="input">
             <option :value="0.25">0.25</option>
             <option :value="0.5">0.5</option>
@@ -98,14 +110,14 @@
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium">Initial Memory</label>
+          <label class="block text-sm font-medium">Memory (GB)</label>
           <select v-model="server.memory" class="input">
             <option
               v-for="memory in allowedMemoryOptions"
               :key="memory"
               :value="memory"
             >
-              {{ memory / 1024 }} GB
+              {{ memory / 1024 }}
             </option>
           </select>
         </div>
@@ -149,6 +161,7 @@ const matchmaking = ref({
 const server = ref({
   cpu: 0.5,
   memory: 1024,
+  maxMatches: 100,
 });
 const serverImageUri = ref("");
 
@@ -207,6 +220,7 @@ async function submit() {
           isPrivate: privateRegistry.value,
           registryCredentials: registryCredentials.value,
         },
+        maxMatches: server.maxMatches,
         initialCpu: server.value.cpu,
         initialMemory: server.value.memory,
       },

@@ -30,6 +30,7 @@ type MatchmakingConfigurationInput struct {
 
 type ServerConfigurationInput struct {
 	ContainerImage ContainerImageInput `dynamodbav:"ContainerImage"`
+	MaxMatches     int                 `dynamodbav:"MaxPlayers"`
 	InitialCpu     float64             `dynamodbav:"InitialCpu"`
 	InitialMemory  int                 `dynamodbav:"InitialMemory"`
 }
