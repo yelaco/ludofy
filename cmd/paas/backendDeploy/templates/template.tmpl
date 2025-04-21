@@ -6,6 +6,10 @@ Parameters:
   ServerImageUri:
     Type: String
     Description: "URI of the Docker image for game server in ECR"
+{{- if .ServerConfiguration.ContainerImage.IsPrivate }}
+  RegistryCredentialsArn:
+    Type: String
+{{- end }}
   DeploymentStage:
     Type: String
     Default: dev
@@ -46,6 +50,9 @@ Resources:
       Parameters:
         StackName: !Ref AWS::StackName
         ServerImageUri: !Ref ServerImageUri
+{{- if .ServerConfiguration.ContainerImage.IsPrivate }}
+        RegistryCredentialsArn: !Ref RegistryCredentialsArn
+{{- end }}
         DeploymentStage: !Ref DeploymentStage
     DependsOn:
       - StorageStack

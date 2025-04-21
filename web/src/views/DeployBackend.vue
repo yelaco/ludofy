@@ -56,6 +56,36 @@
           />
         </div>
         <div>
+          <label class="flex items-center space-x-2">
+            <input type="checkbox" v-model="privateRegistry" class="w-4 h-4" />
+            <span class="text-sm font-medium">Private registry</span>
+          </label>
+        </div>
+
+        <!-- Show these fields only if privateRegistry is true -->
+        <template v-if="privateRegistry">
+          <div class="space-y-4 mt-4">
+            <div>
+              <label class="block text-sm font-medium">Registry Username</label>
+              <input
+                type="text"
+                v-model="registryCredentials.username"
+                class="input"
+                placeholder="Username for private registry"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Registry Password</label>
+              <input
+                type="password"
+                v-model="registryCredentials.password"
+                class="input"
+                placeholder="Password or access token"
+              />
+            </div>
+          </div>
+        </template>
+        <div>
           <label class="block text-sm font-medium">Initial vCPU</label>
           <select v-model="server.cpu" class="input">
             <option :value="0.25">0.25</option>
@@ -122,6 +152,13 @@ const server = ref({
 });
 const serverImageUri = ref("");
 
+const privateRegistry = ref(false);
+
+const registryCredentials = ref({
+  username: "",
+  password: "",
+});
+
 // Compute allowed memory options based on selected CPU
 const allowedMemoryOptions = computed(() => {
   const cpu = server.value.cpu;
@@ -155,7 +192,6 @@ async function submit() {
   try {
     const deployInput = {
       stackName: stackName.value,
-      serverImageUri: serverImageUri.value,
       includeChatService: services.value.chat,
       includeFriendService: services.value.friend,
       includeRankingService: services.value.ranking,
@@ -166,6 +202,11 @@ async function submit() {
         initialRating: matchmaking.value.initialRating,
       },
       serverConfiguration: {
+        containerImage: {
+          uri: serverImageUri.value,
+          isPrivate: privateRegistry.value,
+          registryCredentials: registryCredentials.value,
+        },
         initialCpu: server.value.cpu,
         initialMemory: server.value.memory,
       },

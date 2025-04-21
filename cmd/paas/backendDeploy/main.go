@@ -5,6 +5,7 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -19,6 +20,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/batch/types"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/aws/smithy-go"
 	"github.com/chess-vn/slchess/internal/paas/aws/auth"
 	"github.com/chess-vn/slchess/internal/paas/aws/storage"
 	"github.com/chess-vn/slchess/internal/paas/domains/dtos"
@@ -42,6 +45,7 @@ var (
 	}
 	storageClient *storage.Client
 	batchClient   *batch.Client
+	smClient      *secretsmanager.Client
 
 	batchJobName       string
 	batchJobQueue      string
@@ -55,6 +59,7 @@ func init() {
 		s3.NewFromConfig(cfg),
 	)
 	batchClient = batch.NewFromConfig(cfg)
+	smClient = secretsmanager.NewFromConfig(cfg)
 
 	batchJobName = os.Getenv("BATCH_JOB_NAME")
 	batchJobQueue = os.Getenv("BATCH_JOB_QUEUE")
@@ -127,6 +132,38 @@ func handler(
 		}
 	}
 
+	var secretArn string
+	if input.ServerConfiguration.ContainerImage.IsPrivate {
+		secretName := fmt.Sprintf("%s-registry-credentials", input.StackName)
+		secretValue, _ := json.Marshal(input.ServerConfiguration.ContainerImage.RegistryCredentials)
+
+		output, err := smClient.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
+			Name:         aws.String(secretName),
+			SecretString: aws.String(string(secretValue)),
+		})
+		if err != nil {
+			if isResourceExistsError(err) {
+				// Secret exists, update it
+				output, err := smClient.UpdateSecret(ctx, &secretsmanager.UpdateSecretInput{
+					SecretId:     aws.String(secretName),
+					SecretString: aws.String(string(secretValue)),
+				})
+				if err != nil {
+					return events.APIGatewayProxyResponse{
+						StatusCode: http.StatusInternalServerError,
+					}, fmt.Errorf("failed to update existing secret: %w", err)
+				}
+				secretArn = *output.ARN
+			} else {
+				return events.APIGatewayProxyResponse{
+					StatusCode: http.StatusInternalServerError,
+				}, fmt.Errorf("failed to create secret: %w", err)
+			}
+		} else {
+			secretArn = *output.ARN
+		}
+	}
+
 	jobInput := &batch.SubmitJobInput{
 		JobName:       aws.String(batchJobName),
 		JobQueue:      aws.String(batchJobQueue),
@@ -144,7 +181,11 @@ func handler(
 				},
 				{
 					Name:  aws.String("SERVER_IMAGE_URI"),
-					Value: aws.String(input.ServerImageUri),
+					Value: aws.String(input.ServerConfiguration.ContainerImage.Uri),
+				},
+				{
+					Name:  aws.String("REGISTRY_CREDENTIALS_ARN"),
+					Value: aws.String(secretArn),
 				},
 				{
 					Name:  aws.String("USER_ID"),
@@ -191,6 +232,14 @@ func handler(
 		StatusCode: http.StatusAccepted,
 		Body:       string(respJson),
 	}, nil
+}
+
+func isResourceExistsError(err error) bool {
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.ErrorCode() == "ResourceExistsException"
+	}
+	return false
 }
 
 func main() {

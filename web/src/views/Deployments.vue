@@ -90,7 +90,7 @@
           </div>
 
           <div>
-            🎯 <strong>Matchmaking:</strong>
+            🎯 <strong>Matchmaking Configuration:</strong>
             <ul class="list-disc list-inside ml-4">
               <li>
                 Match Size:

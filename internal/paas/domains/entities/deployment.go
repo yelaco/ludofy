@@ -29,6 +29,18 @@ type MatchmakingConfigurationInput struct {
 }
 
 type ServerConfigurationInput struct {
-	InitialCpu    float64 `dynamodbav:"InitialCpu"`
-	InitialMemory int     `dynamodbav:"InitialMemory"`
+	ContainerImage ContainerImageInput `dynamodbav:"ContainerImage"`
+	InitialCpu     float64             `dynamodbav:"InitialCpu"`
+	InitialMemory  int                 `dynamodbav:"InitialMemory"`
+}
+
+type ContainerImageInput struct {
+	Uri                 string                   `dynamodbav:"Uri"`
+	IsPrivate           bool                     `dynamodbav:"IsPrivate"`
+	RegistryCredentials RegistryCredentialsInput `dynamodbav:"RegistryCredentials"`
+}
+
+type RegistryCredentialsInput struct {
+	Username string `dynamodbav:"Username"`
+	Password string `dynamodbav:"Password"`
 }

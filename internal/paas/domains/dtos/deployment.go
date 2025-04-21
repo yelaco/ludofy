@@ -8,7 +8,6 @@ import (
 
 type DeployInput struct {
 	StackName                     string                        `json:"stackName"`
-	ServerImageUri                string                        `json:"serverImageUri"`
 	IncludeChatService            bool                          `json:"includeChatService"`
 	IncludeFriendService          bool                          `json:"includeFriendService"`
 	IncludeRankingService         bool                          `json:"includeRankingService"`
@@ -24,8 +23,20 @@ type MatchmakingConfigurationInput struct {
 }
 
 type ServerConfigurationInput struct {
-	InitialCpu    float64 `json:"initialCpu"`
-	InitialMemory int     `json:"initialMemory"`
+	ContainerImage ContainerImageInput `json:"containerImage"`
+	InitialCpu     float64             `json:"initialCpu"`
+	InitialMemory  int                 `json:"initialMemory"`
+}
+
+type ContainerImageInput struct {
+	Uri                 string                   `json:"uri"`
+	IsPrivate           bool                     `json:"isPrivate"`
+	RegistryCredentials RegistryCredentialsInput `json:"registryCredentials"`
+}
+
+type RegistryCredentialsInput struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type DeploymentResponse struct {
@@ -64,7 +75,6 @@ func DeploymentResponseFromEntity(deployment entities.Deployment) DeploymentResp
 		Status:    deployment.Status,
 		Input: DeployInput{
 			StackName:                     deployment.Input.StackName,
-			ServerImageUri:                deployment.Input.ServerImageUri,
 			IncludeChatService:            deployment.Input.IncludeChatService,
 			IncludeFriendService:          deployment.Input.IncludeFriendService,
 			IncludeRankingService:         deployment.Input.IncludeRankingService,
@@ -75,6 +85,14 @@ func DeploymentResponseFromEntity(deployment entities.Deployment) DeploymentResp
 				InitialRating:   deployment.Input.MatchmakingConfiguration.InitialRating,
 			},
 			ServerConfiguration: ServerConfigurationInput{
+				ContainerImage: ContainerImageInput{
+					Uri:       deployment.Input.ServerConfiguration.ContainerImage.Uri,
+					IsPrivate: deployment.Input.ServerConfiguration.ContainerImage.IsPrivate,
+					RegistryCredentials: RegistryCredentialsInput{
+						Username: deployment.Input.ServerConfiguration.ContainerImage.RegistryCredentials.Username,
+						Password: deployment.Input.ServerConfiguration.ContainerImage.RegistryCredentials.Password,
+					},
+				},
 				InitialCpu:    deployment.Input.ServerConfiguration.InitialCpu,
 				InitialMemory: deployment.Input.ServerConfiguration.InitialMemory,
 			},
@@ -86,7 +104,6 @@ func DeploymentResponseFromEntity(deployment entities.Deployment) DeploymentResp
 func DeployInputRequestToEntity(input DeployInput) entities.DeployInput {
 	return entities.DeployInput{
 		StackName:                     input.StackName,
-		ServerImageUri:                input.ServerImageUri,
 		IncludeChatService:            input.IncludeChatService,
 		IncludeFriendService:          input.IncludeFriendService,
 		IncludeRankingService:         input.IncludeRankingService,
@@ -97,8 +114,17 @@ func DeployInputRequestToEntity(input DeployInput) entities.DeployInput {
 			InitialRating:   input.MatchmakingConfiguration.InitialRating,
 		},
 		ServerConfiguration: entities.ServerConfigurationInput{
+			ContainerImage: entities.ContainerImageInput{
+				Uri:       input.ServerConfiguration.ContainerImage.Uri,
+				IsPrivate: input.ServerConfiguration.ContainerImage.IsPrivate,
+				RegistryCredentials: entities.RegistryCredentialsInput{
+					Username: input.ServerConfiguration.ContainerImage.RegistryCredentials.Username,
+					Password: input.ServerConfiguration.ContainerImage.RegistryCredentials.Password,
+				},
+			},
 			InitialCpu:    input.ServerConfiguration.InitialCpu,
 			InitialMemory: input.ServerConfiguration.InitialMemory,
 		},
+		ServerImageUri: "",
 	}
 }
