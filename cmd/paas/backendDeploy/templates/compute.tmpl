@@ -42,8 +42,8 @@ Resources:
         - Image: !Ref ServerImageUri
           Name: !Sub "${StackName}-${DeploymentStage}-server"
 {{- if .ServerConfiguration.ContainerImage.IsPrivate }}
-            RepositoryCredentials:
-              CredentialsParameter: !Ref RegistryCredentialsArn
+          RepositoryCredentials:
+            CredentialsParameter: !Ref RegistryCredentialsArn
 {{- end }}
           Essential: true
           PortMappings:
@@ -162,6 +162,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  - secretsmanager:GetSecretValue
                   - ecr:GetDownloadUrlForLayer
                   - ecr:BatchGetImage
                   - ecr:GetAuthorizationToken

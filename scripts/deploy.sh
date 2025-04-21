@@ -5,6 +5,7 @@ set -e
 STACK_NAME=${STACK_NAME:-default-stack}
 GIT_BRANCH=${GIT_BRANCH:-main}
 ENVIRONMENT=${ENVIRONMENT:-dev}
+REGISTRY_CREDENTIALS_ARN=${REGISTRY_CREDENTIALS_ARN:-none}
 GIT_REPO="https://github.com/yelaco/ludofy.git"
 S3_BUCKET="ludofy"
 AWS_REGION="ap-southeast-2"
