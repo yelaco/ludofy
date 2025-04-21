@@ -16,6 +16,7 @@ includes:
     taskfile: ./taskfiles/Cognito.yml
     dir: .
   stack: ./taskfiles/Stack.yml
+  web: ./taskfiles/Web.yml
   server: ./taskfiles/Server.yml
   env: ./taskfiles/Env.yml
   doc: ./taskfiles/Doc.yml

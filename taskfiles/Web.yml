@@ -1,0 +1,12 @@
+version: "3"
+
+includes:
+  utils:
+    taskfile: ./Util.yml
+    internal: true
+    dir: ../
+
+tasks:
+  run-dev:
+    cmds:
+      - npm --prefix web run dev
