@@ -16,8 +16,11 @@
           <h2 class="text-lg font-semibold text-blue-800">
             {{ backend.stackName }}
           </h2>
+          <p class="text-xs text-gray-600">
+            🕒 {{ formatDate(backend.createdAt) }}
+          </p>
         </div>
-        <p class="text-sm text-gray-500">Created: {{ backend.createdAt }}</p>
+        <p class="text-sm text-gray-600">🪪 ID: {{ backend.id }}</p>
 
         <div class="flex gap-3 mt-4">
           <RouterLink
@@ -42,6 +45,12 @@ import { ref, onMounted } from "vue";
 import api from "../api.js";
 
 const backends = ref([]);
+
+function formatDate(isoString) {
+  if (!isoString) return "Unknown date";
+  const date = new Date(isoString);
+  return date.toLocaleString(); // "4/20/2025, 10:30:00 PM" (localized to user's timezone)
+}
 
 onMounted(async () => {
   try {

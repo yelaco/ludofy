@@ -54,7 +54,7 @@
         <!-- Details (only when expanded) -->
         <div v-if="expanded[idx]" class="mt-4 space-y-3 text-sm text-gray-700">
           <p>
-            <strong>Deployment ID: </strong>
+            <strong>🪪 Deployment ID: </strong>
             <span class="font-mono">{{ deployment.id }}</span>
           </p>
           <p>
@@ -115,7 +115,8 @@
               </li>
               <li>
                 Memory:
-                {{ deployment.input.serverConfiguration.initialMemory }} GB
+                {{ deployment.input.serverConfiguration.initialMemory / 1024 }}
+                GB
               </li>
             </ul>
           </div>

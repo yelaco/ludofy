@@ -52,7 +52,6 @@ router.beforeEach(async (to, from, next) => {
     console.warn("No user session, redirecting to Cognito login...");
     return userManager.signinRedirect();
   }
-  console.log(user.id_token);
   next();
 });
 
