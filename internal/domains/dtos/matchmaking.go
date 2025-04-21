@@ -6,14 +6,15 @@ type MatchmakingRequest struct {
 	MinRating float64 `json:"minRating"`
 	MaxRating float64 `json:"maxRating"`
 	GameMode  string  `json:"gameMode"`
+	IsRanked  bool    `json:"isRanked"`
 }
 
-func MatchmakingRequestToEntity(userRating entities.UserRating, req MatchmakingRequest) entities.MatchmakingTicket {
+func MatchmakingRequestToEntity(userId string, req MatchmakingRequest) entities.MatchmakingTicket {
 	return entities.MatchmakingTicket{
-		UserId:     userRating.UserId,
-		UserRating: userRating.Rating,
-		MinRating:  req.MinRating,
-		MaxRating:  req.MaxRating,
-		GameMode:   req.GameMode,
+		UserId:    userId,
+		MinRating: req.MinRating,
+		MaxRating: req.MaxRating,
+		GameMode:  req.GameMode,
+		IsRanked:  req.IsRanked,
 	}
 }

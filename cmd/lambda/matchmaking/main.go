@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -41,6 +42,7 @@ var (
 	ErrInvalidGameMode    = errors.New("invalid game mode")
 	ErrServerNotAvailable = errors.New("server not available")
 
+	matchSize   = 2
 	timeLayout  = "2006-01-02 15:04:05.999999999 -0700 MST"
 	apiEndpoint = fmt.Sprintf("https://%s.execute-api.%s.amazonaws.com/%s", websocketApiId, region, websocketApiStage)
 )
@@ -57,6 +59,8 @@ func init() {
 		Region:       region,
 		Credentials:  cfg.Credentials,
 	})
+	matchSizeStr := os.Getenv("MATCH_SIZE")
+	matchSize, _ = strconv.Atoi(matchSizeStr)
 }
 
 func handler(
@@ -84,17 +88,21 @@ func handler(
 			StatusCode: http.StatusBadRequest,
 		}, fmt.Errorf("failed to validate request: %w", err)
 	}
-	userRating, err := storageClient.GetUserRating(ctx, userId)
-	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-		}, fmt.Errorf("failed to get user rating: %w", err)
-	}
-	ticket := dtos.MatchmakingRequestToEntity(userRating, matchmakingReq)
-	if err := ticket.Validate(); err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusBadRequest,
-		}, fmt.Errorf("invalid ticket: %w", err)
+
+	ticket := dtos.MatchmakingRequestToEntity(userId, matchmakingReq)
+	if matchmakingReq.IsRanked {
+		userRating, err := storageClient.GetUserRating(ctx, userId)
+		if err != nil {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusInternalServerError,
+			}, fmt.Errorf("failed to get user rating: %w", err)
+		}
+		ticket.UserRating = userRating.Rating
+		if err := ticket.Validate(); err != nil {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusBadRequest,
+			}, fmt.Errorf("invalid ticket: %w", err)
+		}
 	}
 
 	// Check if user already in a activeMatch
@@ -135,7 +143,7 @@ func handler(
 	}
 
 	// Attempt matchmaking
-	opponentIds, err := findOpponents(ctx, ticket)
+	playerIds, err := findMatchingPlayers(ctx, ticket)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
@@ -143,7 +151,7 @@ func handler(
 	}
 
 	// If no match found, queue the player by caching the matchmaking ticket
-	if len(opponentIds) == 0 {
+	if len(playerIds) == 0 {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusAccepted,
 			Body:       "Queued",
@@ -166,58 +174,57 @@ func handler(
 	}
 
 	// Try to create new match
-	for _, opponentId := range opponentIds {
-		match, err := createMatch(
-			ctx,
-			[]string{userId, opponentId},
-			ticket.GameMode,
-			serverIp,
-		)
-		if err != nil {
-			continue
-		}
-		matchResp := dtos.ActiveMatchResponseFromEntity(match)
-		matchRespJson, err := json.Marshal(matchResp)
-		if err != nil {
-			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusInternalServerError,
-			}, fmt.Errorf("failed to marshal response: %w", err)
-		}
+	playerIds = append(playerIds, userId)
+	match, err := createMatch(
+		ctx,
+		playerIds,
+		ticket.GameMode,
+		serverIp,
+	)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+		}, fmt.Errorf("failed to create match: %w", err)
+	}
+	matchResp := dtos.ActiveMatchResponseFromEntity(match)
+	matchRespJson, err := json.Marshal(matchResp)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+		}, fmt.Errorf("failed to marshal response: %w", err)
+	}
 
-		// Notify the opponent about the match
-		err = notifyQueueingUser(ctx, opponentId, matchRespJson)
+	// Notify the other players about the match
+	for _, playerId := range playerIds {
+		err = notifyQueueingUser(ctx, playerId, matchRespJson)
 		if err != nil {
 			return events.APIGatewayProxyResponse{
 				StatusCode: http.StatusInternalServerError,
 			}, fmt.Errorf("failed to notify queueing user: %w", err)
 		}
-
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusOK,
-			Body:       string(matchRespJson),
-		}, nil
 	}
 
 	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusInternalServerError,
+		StatusCode: http.StatusOK,
+		Body:       string(matchRespJson),
 	}, nil
 }
 
 // Matchmaking function using go-redis commands
-func findOpponents(
+func findMatchingPlayers(
 	ctx context.Context,
 	ticket entities.MatchmakingTicket,
 ) (
 	[]string,
 	error,
 ) {
-	tickets, err := storageClient.ScanMatchmakingTickets(ctx, ticket)
+	tickets, err := storageClient.ScanMatchmakingTickets(ctx, ticket, matchSize-1)
 	if err != nil {
 		return nil, fmt.Errorf("failed to scan matchmaking tickets: %w", err)
 	}
 
 	var opponentIds []string
-	if len(tickets) > 0 {
+	if len(tickets) == matchSize-1 {
 		for _, opTicket := range tickets {
 			if opTicket.UserId == ticket.UserId {
 				continue
@@ -225,7 +232,7 @@ func findOpponents(
 			opponentIds = append(opponentIds, opTicket.UserId)
 		}
 	} else {
-		// No match found, add the user ticket to the queue
+		// Not enough players, add the user ticket to the pool
 		storageClient.PutMatchmakingTickets(ctx, ticket)
 	}
 
@@ -254,30 +261,11 @@ func createMatch(
 		match.Players = append(match.Players, entities.Player{
 			Id: playerId,
 		})
-		// Associate the players with created match to kind of mark them as matched
-		err := storageClient.PutUserMatch(ctx, entities.UserMatch{
-			UserId:  playerId,
-			MatchId: match.MatchId,
-		})
-		if err != nil {
-			return entities.ActiveMatch{}, err
-		}
-
-		// Match created, remove opponent ticket from the queue
-		err = storageClient.DeleteMatchmakingTickets(ctx, playerId)
-		if err != nil {
-			return entities.ActiveMatch{},
-				fmt.Errorf(
-					"failed to delete matchmaking ticket: [userId: %s] %w",
-					playerId,
-					err,
-				)
-		}
 	}
 
 	// Save match information
-	if err := storageClient.PutActiveMatch(ctx, match); err != nil {
-		return entities.ActiveMatch{}, fmt.Errorf("failed to put active match: %w", err)
+	if err := storageClient.TransactCreateMatch(ctx, match); err != nil {
+		return entities.ActiveMatch{}, fmt.Errorf("failed to transact create match: %w", err)
 	}
 
 	// Create a conversation for spectators
@@ -314,16 +302,6 @@ func notifyQueueingUser(ctx context.Context, userId string, data []byte) error {
 	)
 	if err != nil {
 		return fmt.Errorf("failed to post to connect: %w", err)
-	}
-
-	_, err = apigatewayClient.DeleteConnection(
-		ctx,
-		&apigatewaymanagementapi.DeleteConnectionInput{
-			ConnectionId: aws.String(connection.Id),
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to delete connection: %w", err)
 	}
 
 	return nil

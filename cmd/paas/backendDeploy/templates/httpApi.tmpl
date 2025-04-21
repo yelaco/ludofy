@@ -108,6 +108,7 @@ Resources:
                     Fn::ImportValue: !Sub "${StackName}-WebsocketApiId"
       Environment:
         Variables:
+          MATCH_SIZE: {{ .MatchmakingConfiguration.MatchSize }}
           SERVER_CLUSTER_NAME:
             Fn::ImportValue: !Sub "${StackName}-ServerClusterName"
           SERVER_SERVICE_NAME:

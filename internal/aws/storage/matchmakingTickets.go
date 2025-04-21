@@ -14,25 +14,33 @@ import (
 func (client *Client) ScanMatchmakingTickets(
 	ctx context.Context,
 	ticket entities.MatchmakingTicket,
+	limit int,
 ) (
 	[]entities.MatchmakingTicket,
 	error,
 ) {
-	filter := "MinRating >= :min AND MaxRating <= :max AND GameMode = :mode"
-	output, err := client.dynamodb.Scan(ctx, &dynamodb.ScanInput{
-		TableName:        client.cfg.MatchmakingTicketsTableName,
-		FilterExpression: aws.String(filter),
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":min": &types.AttributeValueMemberN{
-				Value: strconv.Itoa(int(ticket.MinRating)),
-			},
-			":max": &types.AttributeValueMemberN{
-				Value: strconv.Itoa(int(ticket.MaxRating)),
-			},
-			":mode": &types.AttributeValueMemberS{
-				Value: ticket.GameMode,
-			},
+	filter := "GameMode = :mode"
+	expressionAttributeValues := map[string]types.AttributeValue{
+		":mode": &types.AttributeValueMemberS{
+			Value: ticket.GameMode,
 		},
+	}
+	if ticket.IsRanked {
+		filter += " AND MinRating >= :min AND MaxRating <= :max"
+		expressionAttributeValues[":min"] = &types.AttributeValueMemberN{
+			Value: strconv.Itoa(int(ticket.MinRating)),
+		}
+		expressionAttributeValues[":max"] = &types.AttributeValueMemberN{
+			Value: strconv.Itoa(int(ticket.MaxRating)),
+		}
+	}
+
+	output, err := client.dynamodb.Scan(ctx, &dynamodb.ScanInput{
+		TableName:                 client.cfg.MatchmakingTicketsTableName,
+		FilterExpression:          aws.String(filter),
+		ExpressionAttributeValues: expressionAttributeValues,
+		Limit:                     aws.Int32(int32(limit)),
+		ConsistentRead:            aws.Bool(true),
 	})
 	if err != nil {
 		return nil, err

@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -41,15 +43,18 @@ func handler(
 		return event, fmt.Errorf("failed to put user profile: %w", err)
 	}
 
-	// Default user rating
-	err = storageClient.PutUserRating(ctx, entities.UserRating{
-		UserId:       userId,
-		Rating:       1200,
-		RD:           200,
-		PartitionKey: "UserRatings",
-	})
-	if err != nil {
-		return event, fmt.Errorf("failed to put user rating: %w", err)
+	initialRatingStr, ok := os.LookupEnv("INITIAL_RATING")
+	if ok {
+		initialRating, _ := strconv.ParseFloat(initialRatingStr, 64)
+		err = storageClient.PutUserRating(ctx, entities.UserRating{
+			UserId:       userId,
+			Rating:       initialRating,
+			RD:           200,
+			PartitionKey: "UserRatings",
+		})
+		if err != nil {
+			return event, fmt.Errorf("failed to put user rating: %w", err)
+		}
 	}
 
 	return event, nil

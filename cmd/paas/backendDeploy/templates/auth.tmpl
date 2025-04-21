@@ -83,6 +83,7 @@ Resources:
 {{- if .IncludeRankingService }}
           USER_RATINGS_TABLE_NAME:
             Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
+          INITIAL_RATING: {{ .MatchmakingConfiguration.InitialRating }}
 {{- end }}
 
   PostUserConfirmationPermission:

@@ -14,6 +14,38 @@ import (
 
 var ErrDeploymentNotFound = fmt.Errorf("deployment not found")
 
+func (client *Client) CheckPendingDeployment(
+	ctx context.Context,
+	userId string,
+) (
+	bool,
+	error,
+) {
+	input := &dynamodb.QueryInput{
+		TableName:              client.cfg.DeploymentsTableName,
+		IndexName:              aws.String("UserIndex"),
+		KeyConditionExpression: aws.String("UserId = :userId"),
+		FilterExpression:       aws.String("#stat = :stat"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":userId": &types.AttributeValueMemberS{Value: userId},
+			":stat":   &types.AttributeValueMemberS{Value: "pending"},
+		},
+		ExpressionAttributeNames: map[string]string{
+			"#stat": "Status",
+		},
+		ProjectionExpression: aws.String("Id"),
+		Limit:                aws.Int32(1),
+	}
+	output, err := client.dynamodb.Query(ctx, input)
+	if err != nil {
+		return false, fmt.Errorf("failed to query deployments: %w", err)
+	}
+	if len(output.Items) > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
 func (client *Client) GetDeployment(
 	ctx context.Context,
 	id string,

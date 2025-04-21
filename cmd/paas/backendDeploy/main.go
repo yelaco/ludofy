@@ -98,6 +98,19 @@ func handler(
 		}, nil
 	}
 
+	pending, err := storageClient.CheckPendingDeployment(ctx, userId)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+		}, fmt.Errorf("failed to check pending deployment: %w", err)
+	}
+	if pending {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusConflict,
+			Body:       "Another deployment is ongoing",
+		}, nil
+	}
+
 	funcMap := template.FuncMap{
 		"mul": func(a float64, b int) int {
 			return int(a * float64(b))
