@@ -272,6 +272,15 @@ Resources:
                 - batch:SubmitJob
                 - batch:TagResource
               Resource: "*"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:CreateSecret
+                - secretsmanager:UpdateSecret
+                - secretsmanager:PutSecretValue
+                - secretsmanager:TagResource
+                - secretsmanager:DescribeSecret
+              Resource: "*"
         - DynamoDBCrudPolicy:
             TableName: !Ref Deployments
         - DynamoDBCrudPolicy:

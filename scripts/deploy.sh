@@ -5,6 +5,7 @@ set -e
 STACK_NAME=${STACK_NAME:-default-stack}
 GIT_BRANCH=${GIT_BRANCH:-main}
 ENVIRONMENT=${ENVIRONMENT:-dev}
+REGISTRY_CREDENTIALS_ARN=${REGISTRY_CREDENTIALS_ARN:-none}
 GIT_REPO="https://github.com/yelaco/ludofy.git"
 S3_BUCKET="ludofy"
 AWS_REGION="ap-southeast-2"
@@ -31,7 +32,7 @@ sam build
 sam deploy \
 	--stack-name "$STACK_NAME" \
 	--region "$AWS_REGION" \
-	--parameter-overrides "ServerImageUri=$SERVER_IMAGE_URI" \
+	--parameter-overrides "ServerImageUri=$SERVER_IMAGE_URI RegistryCredentialsArn=$REGISTRY_CREDENTIALS_ARN" \
 	--s3-bucket "$S3_BUCKET" \
 	--s3-prefix "$USER_ID/$BACKEND_ID/deployment" \
 	--capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
