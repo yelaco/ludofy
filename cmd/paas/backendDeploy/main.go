@@ -89,7 +89,7 @@ func handler(
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-		}, fmt.Errorf("failed to check existed backend stack: %w", err)
+		}, fmt.Errorf("failed to check for existed backend stack: %w", err)
 	}
 	if exist {
 		return events.APIGatewayProxyResponse{

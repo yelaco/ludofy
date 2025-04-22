@@ -53,7 +53,7 @@ func handler(ctx context.Context, event dtos.BackendDeployEvent) error {
 			Id:        deployment.BackendId,
 			UserId:    deployment.UserId,
 			StackName: deployment.Input.StackName,
-			Status:    "ACTIVE",
+			Status:    "active",
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		})

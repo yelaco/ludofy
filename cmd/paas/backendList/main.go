@@ -82,13 +82,13 @@ func extractParameters(
 	int32,
 	error,
 ) {
-	limit := 5
+	var limit int32 = 10
 	if limitStr, ok := params["limit"]; ok {
 		limitInt64, err := strconv.ParseInt(limitStr, 10, 32)
 		if err != nil {
 			return nil, 0, fmt.Errorf("invalid limit: %v", err)
 		}
-		limit = int(limitInt64)
+		limit = int32(limitInt64)
 	}
 
 	// Check for startKey (optional)
@@ -111,7 +111,7 @@ func extractParameters(
 		}
 	}
 
-	return startKey, int32(limit), nil
+	return startKey, limit, nil
 }
 
 func main() {

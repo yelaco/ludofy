@@ -34,7 +34,6 @@ func (client *Client) CheckPendingDeployment(
 			"#stat": "Status",
 		},
 		ProjectionExpression: aws.String("Id"),
-		Limit:                aws.Int32(1),
 	}
 	output, err := client.dynamodb.Query(ctx, input)
 	if err != nil {
@@ -92,6 +91,7 @@ func (client *Client) FetchDeployments(
 			":userId": &types.AttributeValueMemberS{Value: userId},
 		},
 		ExclusiveStartKey: lastKey,
+		ScanIndexForward:  aws.Bool(false),
 		Limit:             aws.Int32(limit),
 	}
 

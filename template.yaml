@@ -544,6 +544,8 @@ Resources:
           AttributeType: S
         - AttributeName: UserId
           AttributeType: S
+        - AttributeName: UpdatedAt
+          AttributeType: S
       KeySchema:
         - AttributeName: Id
           KeyType: HASH
@@ -552,6 +554,8 @@ Resources:
           KeySchema:
             - AttributeName: UserId
               KeyType: HASH
+            - AttributeName: UpdatedAt
+              KeyType: RANGE
           Projection:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
@@ -565,6 +569,8 @@ Resources:
           AttributeType: S
         - AttributeName: UserId
           AttributeType: S
+        - AttributeName: CreatedAt
+          AttributeType: S
       KeySchema:
         - AttributeName: Id
           KeyType: HASH
@@ -573,6 +579,8 @@ Resources:
           KeySchema:
             - AttributeName: UserId
               KeyType: HASH
+            - AttributeName: CreatedAt
+              KeyType: RANGE
           Projection:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST

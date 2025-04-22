@@ -29,10 +29,7 @@ var (
 
 func init() {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
-	storageClient = storage.NewClient(
-		dynamodb.NewFromConfig(cfg),
-		nil,
-	)
+	storageClient = storage.NewClient(dynamodb.NewFromConfig(cfg), nil)
 	batchClient = batch.NewFromConfig(cfg)
 
 	batchJobName = os.Getenv("BATCH_JOB_NAME")

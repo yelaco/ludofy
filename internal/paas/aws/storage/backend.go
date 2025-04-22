@@ -61,7 +61,6 @@ func (client *Client) CheckExistedBackendStack(
 			":stackName": &types.AttributeValueMemberS{Value: stackName},
 		},
 		ProjectionExpression: aws.String("Id"),
-		Limit:                aws.Int32(1),
 	})
 	if err != nil {
 		return false, fmt.Errorf("failed to query backend: %w", err)
@@ -87,6 +86,7 @@ func (client *Client) FetchBackends(
 			":userId": &types.AttributeValueMemberS{Value: userId},
 		},
 		ExclusiveStartKey: lastKey,
+		ScanIndexForward:  aws.Bool(false),
 		Limit:             aws.Int32(limit),
 	}
 	output, err := client.dynamodb.Query(ctx, input)
