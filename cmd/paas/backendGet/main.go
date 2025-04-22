@@ -25,10 +25,7 @@ var (
 
 func init() {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
-	storageClient = storage.NewClient(
-		dynamodb.NewFromConfig(cfg),
-		nil,
-	)
+	storageClient = storage.NewClient(dynamodb.NewFromConfig(cfg), nil)
 	cfClient = cloudformation.NewFromConfig(cfg)
 }
 

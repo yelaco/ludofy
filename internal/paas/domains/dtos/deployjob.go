@@ -6,3 +6,10 @@ type BackendDeployEvent struct {
 	JobQueue string `json:"jobQueue"`
 	Status   string `json:"status"`
 }
+
+type BackendRemoveEvent struct {
+	JobName  string `json:"jobName"`
+	JobId    string `json:"jobId"`
+	JobQueue string `json:"jobQueue"`
+	Status   string `json:"status"`
+}

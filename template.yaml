@@ -8,6 +8,8 @@ Parameters:
     Default: ludofy
   DeployJobImageUri:
     Type: String
+  RemoveJobImageUri:
+    Type: String
   DeploymentStage:
     Type: String
     Default: dev
@@ -89,7 +91,7 @@ Resources:
           ComputeEnvironment: !Ref BatchComputeEnvironment
       Priority: 1
 
-  BatchJobDefinition:
+  DeployJobDefinition:
     Type: AWS::Batch::JobDefinition
     Properties:
       JobDefinitionName: !Sub "${StackName}-deploy-job-definition"
@@ -103,6 +105,25 @@ Resources:
             Value: "1"
           - Type: MEMORY
             Value: "4096"
+        ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+        JobRoleArn: !GetAtt DeployJobRole.Arn
+        NetworkConfiguration:
+          AssignPublicIp: ENABLED
+
+  RemoveJobDefinition:
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      JobDefinitionName: !Sub "${StackName}-remove-job-definition"
+      Type: Container
+      PlatformCapabilities:
+        - FARGATE
+      ContainerProperties:
+        Image: !Ref RemoveJobImageUri
+        ResourceRequirements:
+          - Type: VCPU
+            Value: "0.25"
+          - Type: MEMORY
+            Value: "512"
         ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
         JobRoleArn: !GetAtt DeployJobRole.Arn
         NetworkConfiguration:
@@ -193,7 +214,7 @@ Resources:
         source:
           - aws.batch
         detail-type:
-          - Batch Job State Change
+          - Deploy Job State Change
         detail:
           status:
             - SUCCEEDED
@@ -217,13 +238,53 @@ Resources:
                 "status": "<status>"
               }
 
-  PermissionForEventsToInvokeLambda:
+  PostBackendRemoveRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${StackName}-PostBackendRemoveRule"
+      EventPattern:
+        source:
+          - aws.batch
+        detail-type:
+          - Remove Job State Change
+        detail:
+          status:
+            - SUCCEEDED
+            - FAILED
+          jobName:
+            - backend-remove-job
+      Targets:
+        - Arn: !GetAtt PostBackendRemoveFunction.Arn
+          Id: PostBackendRemoveTarget
+          InputTransformer:
+            InputPathsMap:
+              jobName: "$.detail.jobName"
+              jobId: "$.detail.jobId"
+              jobQueue: "$.detail.jobQueue"
+              status: "$.detail.status"
+            InputTemplate: |
+              {
+                "jobName": "<jobName>",
+                "jobId": "<jobId>",
+                "jobQueue": "<jobQueue>",
+                "status": "<status>"
+              }
+
+  PermissionForEventsToInvokePostDeploy:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !GetAtt PostBackendDeployFunction.Arn
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
       SourceArn: !GetAtt PostBackendDeployRule.Arn
+
+  PermissionForEventsToInvokePostRemove:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt PostBackendRemoveFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt PostBackendRemoveRule.Arn
 
   ### HTTP API Gateway ###
   HttpApi:
@@ -325,6 +386,38 @@ Resources:
         Variables:
           DEPLOYMENTS_TABLE_NAME: !Ref Deployments
           BACKENDS_TABLE_NAME: !Ref Backends
+
+  BackendRemoveFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-BackendRemove"
+      CodeUri: ./cmd/paas/backendRemove/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Backends
+        - Statement:
+            - Effect: Allow
+              Action:
+                - batch:SubmitJob
+                - batch:TagResource
+              Resource: "*"
+      Environment:
+        Variables:
+          BATCH_JOB_NAME: "backend-remove-job"
+          BATCH_JOB_QUEUE: !Ref BatchJobQueue
+          BATCH_JOB_DEFINITION: !Ref BatchJobDefinition
+          BACKENDS_TABLE_NAME: !Ref Backends
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /backend/{id}
+            Method: DELETE
+            ApiId: !Ref HttpApi
 
   BackendGetFunction:
     Type: AWS::Serverless::Function
@@ -463,9 +556,13 @@ Resources:
       BillingMode: PAY_PER_REQUEST
 
 Outputs:
-  DeployBackendUrl:
+  BackendDeployUrl:
     Description: "Endpoint URL for deploying backend"
     Value: !Sub "POST https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}/deploy"
+
+  BackendRemoveUrl:
+    Description: "Endpoint URL for removing backend"
+    Value: !Sub "DELETE https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}/backend/{id}"
 
   BackendGetUrl:
     Description: "Endpoint URL for getting backend information"

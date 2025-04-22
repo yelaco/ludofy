@@ -10,6 +10,7 @@ type BackendResponse struct {
 	Id        string            `json:"id"`
 	UserId    string            `json:"userId"`
 	StackName string            `json:"stackName"`
+	Status    string            `json:"status"`
 	Outputs   map[string]string `json:"outputs"`
 	CreatedAt time.Time         `json:"createdAt"`
 }
@@ -38,6 +39,7 @@ func BackendResponseFromEntity(backend entities.Backend) BackendResponse {
 		Id:        backend.Id,
 		UserId:    backend.UserId,
 		StackName: backend.StackName,
+		Status:    backend.Status,
 		CreatedAt: backend.CreatedAt,
 	}
 }

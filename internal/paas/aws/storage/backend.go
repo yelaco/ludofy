@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -99,6 +100,45 @@ func (client *Client) FetchBackends(
 	return backends, output.LastEvaluatedKey, nil
 }
 
+type BackendUpdateOptions struct {
+	Status *string
+}
+
+func (client *Client) UpdateBackend(
+	ctx context.Context,
+	backendId string,
+	opts BackendUpdateOptions,
+) error {
+	updateExpression := []string{}
+	expressionAttributeValues := map[string]types.AttributeValue{}
+	expressionAttributeNames := map[string]string{}
+
+	if opts.Status != nil {
+		updateExpression = append(updateExpression, "#stat = :stat")
+		expressionAttributeValues[":stat"] = &types.AttributeValueMemberS{
+			Value: *opts.Status,
+		}
+		expressionAttributeNames["#stat"] = "Status"
+	}
+
+	_, err := client.dynamodb.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName: client.cfg.BackendsTableName,
+		Key: map[string]types.AttributeValue{
+			"Id": &types.AttributeValueMemberS{
+				Value: backendId,
+			},
+		},
+		UpdateExpression:          aws.String("SET " + strings.Join(updateExpression, ", ")),
+		ExpressionAttributeValues: expressionAttributeValues,
+		ExpressionAttributeNames:  expressionAttributeNames,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (client *Client) PutBackend(
 	ctx context.Context,
 	backend entities.Backend,
@@ -116,5 +156,23 @@ func (client *Client) PutBackend(
 		return fmt.Errorf("failed to put item: %w", err)
 	}
 
+	return nil
+}
+
+func (client *Client) DeleteBackend(
+	ctx context.Context,
+	backendId string,
+) error {
+	_, err := client.dynamodb.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+		TableName: client.cfg.BackendsTableName,
+		Key: map[string]types.AttributeValue{
+			"Id": &types.AttributeValueMemberS{
+				Value: backendId,
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
