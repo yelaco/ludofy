@@ -12,16 +12,29 @@
         :key="backend.id"
         class="border rounded-md p-4 shadow-sm bg-white"
       >
-        <div class="flex justify-between items-center mb-2">
-          <h2 class="text-lg font-semibold text-blue-800">
-            {{ backend.stackName }}
-          </h2>
-          <p class="text-xs text-gray-600">
-            🕒 {{ formatDate(backend.createdAt) }}
-          </p>
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-2">
+            <h2 class="text-lg font-semibold text-blue-800">
+              {{ backend.stackName }}
+            </h2>
+          </div>
+          <div class="flex items-center gap-4">
+            <p class="text-xs text-gray-500">
+              🕒 {{ formatDate(backend.updatedAt) }}
+            </p>
+            <span
+              class="px-2 py-1 text-sm rounded"
+              :class="{
+                'bg-green-100 text-green-700': backend.status === 'active',
+                'bg-yellow-100 text-yellow-700':
+                  backend.status === 'delete-in-progress',
+                'bg-red-100 text-red-700': backend.status === 'delete-failed',
+              }"
+            >
+              {{ backend.status }}
+            </span>
+          </div>
         </div>
-
-        <p class="text-sm text-gray-600">🪪 ID: {{ backend.id }}</p>
 
         <div class="flex gap-3 mt-4">
           <RouterLink

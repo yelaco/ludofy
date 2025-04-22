@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -109,8 +110,12 @@ func (client *Client) UpdateBackend(
 	backendId string,
 	opts BackendUpdateOptions,
 ) error {
-	updateExpression := []string{}
-	expressionAttributeValues := map[string]types.AttributeValue{}
+	updateExpression := []string{"UpdatedAt = :updatedAt"}
+	expressionAttributeValues := map[string]types.AttributeValue{
+		":updatedAt": &types.AttributeValueMemberS{
+			Value: time.Now().Format(time.RFC3339Nano),
+		},
+	}
 	expressionAttributeNames := map[string]string{}
 
 	if opts.Status != nil {

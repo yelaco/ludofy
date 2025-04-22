@@ -55,6 +55,7 @@ func handler(ctx context.Context, event dtos.BackendDeployEvent) error {
 			StackName: deployment.Input.StackName,
 			Status:    "ACTIVE",
 			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to put backend: %w", err)

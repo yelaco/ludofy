@@ -43,7 +43,6 @@ var (
 	ErrServerNotAvailable = errors.New("server not available")
 
 	matchSize   = 2
-	timeLayout  = "2006-01-02 15:04:05.999999999 -0700 MST"
 	apiEndpoint = fmt.Sprintf("https://%s.execute-api.%s.amazonaws.com/%s", websocketApiId, region, websocketApiStage)
 )
 

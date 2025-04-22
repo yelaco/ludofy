@@ -59,7 +59,9 @@
           </p>
           <p>
             🐳 <strong>Server Image: </strong>
-            <span class="font-mono">{{ deployment.input.serverImageUri }}</span>
+            <span class="font-mono">{{
+              deployment.input.serverConfiguration.containerImage.uri
+            }}</span>
           </p>
 
           <div>

@@ -64,7 +64,7 @@ func handler(
 	if backend.UserId != userId {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusForbidden,
-		}, fmt.Errorf("invalid user id")
+		}, fmt.Errorf("unauthorized user")
 	}
 
 	jobInput := &batch.SubmitJobInput{

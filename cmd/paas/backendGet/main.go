@@ -37,9 +37,9 @@ func handler(
 	error,
 ) {
 	auth.MustAuth(event.RequestContext.Authorizer)
-	backendId := event.PathParameters["id"]
+	id := event.PathParameters["id"]
 
-	backend, err := storageClient.GetBackend(ctx, backendId)
+	backend, err := storageClient.GetBackend(ctx, id)
 	if err != nil {
 		if errors.Is(err, storage.ErrBackendNotFound) {
 			return events.APIGatewayProxyResponse{
@@ -74,6 +74,7 @@ func handler(
 			StatusCode: http.StatusInternalServerError,
 		}, fmt.Errorf("failed to marshal response: %w", err)
 	}
+
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(respJson),

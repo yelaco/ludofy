@@ -137,7 +137,7 @@ func (client *Client) UpdateActiveMatch(
 	if opts.StartedAt != nil {
 		updateExpression = append(updateExpression, "StartedAt = :startedAt")
 		expressionAttributeValues[":startedAt"] = &types.AttributeValueMemberS{
-			Value: opts.StartedAt.Format(time.RFC3339),
+			Value: opts.StartedAt.Format(time.RFC3339Nano),
 		}
 	}
 

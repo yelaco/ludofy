@@ -84,7 +84,7 @@ func extractParameters(
 ) {
 	limit := 10
 	if limitStr, ok := params["limit"]; ok {
-		limitInt64, err := strconv.ParseInt(limitStr, 10, 32)
+		limitInt64, err := strconv.ParseInt(limitStr, 10, 64)
 		if err != nil {
 			return nil, 0, fmt.Errorf("invalid limit: %v", err)
 		}

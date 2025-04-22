@@ -31,9 +31,9 @@ func handler(
 	error,
 ) {
 	auth.MustAuth(event.RequestContext.Authorizer)
-	deploymentId := event.PathParameters["id"]
+	id := event.PathParameters["id"]
 
-	deployment, err := storageClient.GetDeployment(ctx, deploymentId)
+	deployment, err := storageClient.GetDeployment(ctx, id)
 	if err != nil {
 		if errors.Is(err, storage.ErrDeploymentNotFound) {
 			return events.APIGatewayProxyResponse{

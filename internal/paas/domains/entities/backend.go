@@ -8,4 +8,5 @@ type Backend struct {
 	StackName string    `dynamodbav:"StackName"`
 	Status    string    `dynamodbav:"Status"`
 	CreatedAt time.Time `dynamodbav:"CreatedAt"`
+	UpdatedAt time.Time `dynamodbav:"UpdatedAt"`
 }

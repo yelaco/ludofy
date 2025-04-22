@@ -13,6 +13,7 @@ type BackendResponse struct {
 	Status    string            `json:"status"`
 	Outputs   map[string]string `json:"outputs"`
 	CreatedAt time.Time         `json:"createdAt"`
+	UpdatedAt time.Time         `json:"updatedAt"`
 }
 
 type BackendListResponse struct {
@@ -41,5 +42,6 @@ func BackendResponseFromEntity(backend entities.Backend) BackendResponse {
 		StackName: backend.StackName,
 		Status:    backend.Status,
 		CreatedAt: backend.CreatedAt,
+		UpdatedAt: backend.UpdatedAt,
 	}
 }

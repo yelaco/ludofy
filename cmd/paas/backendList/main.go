@@ -82,7 +82,7 @@ func extractParameters(
 	int32,
 	error,
 ) {
-	limit := 10
+	limit := 5
 	if limitStr, ok := params["limit"]; ok {
 		limitInt64, err := strconv.ParseInt(limitStr, 10, 32)
 		if err != nil {
