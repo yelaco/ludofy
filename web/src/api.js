@@ -31,6 +31,9 @@ export default {
   deployBackend(data) {
     return api.post("/deploy", data);
   },
+  removeBackend(id) {
+    return api.delete(`/backend/${id}`);
+  },
   getBackend(id) {
     return api.get(`/backend/${id}`);
   },

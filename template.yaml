@@ -326,6 +326,35 @@ Resources:
           DEPLOYMENTS_TABLE_NAME: !Ref Deployments
           BACKENDS_TABLE_NAME: !Ref Backends
 
+  BackendRemoveFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-BackendRemove"
+      CodeUri: ./cmd/paas/backendRemove/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Backends
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cloudformation:DeleteStack
+              Resource: "*"
+      Environment:
+        Variables:
+          BACKENDS_TABLE_NAME: !Ref Backends
+          DEPLOY_JOB_ROLE_ARN: !GetAtt DeployJobRole.Arn
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /backend/{id}
+            Method: DELETE
+            ApiId: !Ref HttpApi
+
   BackendGetFunction:
     Type: AWS::Serverless::Function
     Metadata:
