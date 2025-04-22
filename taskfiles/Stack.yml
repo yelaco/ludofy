@@ -25,7 +25,7 @@ tasks:
       - sam deploy
         --stack-name $STACK
         --region $AWS_REGION
-        --parameter-overrides "DeployJobImageUri=$DEPLOY_JOB_IMAGE_URI"
+        --parameter-overrides "DeployJobImageUri=$DEPLOY_JOB_IMAGE_URI RemoveJobImageUri=$REMOVE_JOB_IMAGE_URI"
         --confirm-changeset
         --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND
         --on-failure DELETE

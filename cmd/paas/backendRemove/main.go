@@ -11,7 +11,8 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	"github.com/aws/aws-sdk-go-v2/service/batch"
+	"github.com/aws/aws-sdk-go-v2/service/batch/types"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/chess-vn/slchess/internal/paas/aws/auth"
 	"github.com/chess-vn/slchess/internal/paas/aws/storage"
@@ -19,7 +20,11 @@ import (
 
 var (
 	storageClient *storage.Client
-	cfClient      *cloudformation.Client
+	batchClient   *batch.Client
+
+	batchJobName       string
+	batchJobQueue      string
+	batchJobDefinition string
 )
 
 func init() {
@@ -28,7 +33,11 @@ func init() {
 		dynamodb.NewFromConfig(cfg),
 		nil,
 	)
-	cfClient = cloudformation.NewFromConfig(cfg)
+	batchClient = batch.NewFromConfig(cfg)
+
+	batchJobName = os.Getenv("BATCH_JOB_NAME")
+	batchJobQueue = os.Getenv("BATCH_JOB_QUEUE")
+	batchJobDefinition = os.Getenv("BATCH_JOB_DEFINITION")
 }
 
 func handler(
@@ -58,14 +67,47 @@ func handler(
 		}, fmt.Errorf("invalid user id")
 	}
 
-	_, err = cfClient.DeleteStack(ctx, &cloudformation.DeleteStackInput{
-		StackName: aws.String(backend.StackName),
-		RoleARN:   aws.String(os.Getenv("DEPLOY_JOB_ROLE_ARN")),
-	})
+	jobInput := &batch.SubmitJobInput{
+		JobName:       aws.String(batchJobName),
+		JobQueue:      aws.String(batchJobQueue),
+		JobDefinition: aws.String(batchJobDefinition),
+		Tags: map[string]string{
+			"backendId": backendId,
+		},
+
+		// Optional: Pass environment variables or overrides
+		ContainerOverrides: &types.ContainerOverrides{
+			Environment: []types.KeyValuePair{
+				{
+					Name:  aws.String("STACK_NAME"),
+					Value: aws.String(backend.StackName),
+				},
+				{
+					Name:  aws.String("USER_ID"),
+					Value: aws.String(userId),
+				},
+				{
+					Name:  aws.String("BACKEND_ID"),
+					Value: aws.String(backendId),
+				},
+			},
+		},
+	}
+	_, err = batchClient.SubmitJob(ctx, jobInput)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-		}, fmt.Errorf("failed to delete stack: %w", err)
+		}, fmt.Errorf("failed to submit remove job: %w", err)
+	}
+
+	opts := storage.BackendUpdateOptions{
+		Status: aws.String("delete-in-progress"),
+	}
+	err = storageClient.UpdateBackend(ctx, backendId, opts)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+		}, fmt.Errorf("failed to update backend: %w", err)
 	}
 
 	return events.APIGatewayProxyResponse{

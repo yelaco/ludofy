@@ -4,7 +4,6 @@ set -e
 # Variables from environment (provided during Batch submit)
 STACK_NAME=${STACK_NAME:-default-stack}
 ENVIRONMENT=${ENVIRONMENT:-dev}
-REGISTRY_CREDENTIALS_ARN=${REGISTRY_CREDENTIALS_ARN:-none}
 S3_BUCKET="ludofy"
 AWS_REGION="ap-southeast-2"
 

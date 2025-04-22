@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -12,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/chess-vn/slchess/internal/paas/aws/storage"
 	"github.com/chess-vn/slchess/internal/paas/domains/dtos"
-	"github.com/chess-vn/slchess/internal/paas/domains/entities"
 )
 
 var (
@@ -27,7 +25,7 @@ func init() {
 }
 
 // Handler function
-func handler(ctx context.Context, event dtos.BackendDeployEvent) error {
+func handler(ctx context.Context, event dtos.BackendRemoveEvent) error {
 	output, err := batchClient.DescribeJobs(ctx, &batch.DescribeJobsInput{
 		Jobs: []string{event.JobId},
 	})
@@ -38,36 +36,24 @@ func handler(ctx context.Context, event dtos.BackendDeployEvent) error {
 		return fmt.Errorf("unknown job with id: %s", event.JobId)
 	}
 
-	deploymentId, ok := output.Jobs[0].Tags["deploymentId"]
+	backendId, ok := output.Jobs[0].Tags["backendId"]
 	if !ok {
 		return fmt.Errorf("deployment id not found for job with id: %s", event.JobId)
 	}
 
-	status := "failed"
 	if event.Status == "SUCCEEDED" {
-		deployment, err := storageClient.GetDeployment(ctx, deploymentId)
-		if err != nil {
-			return fmt.Errorf("failed to get deployment: %w", err)
-		}
-		err = storageClient.PutBackend(ctx, entities.Backend{
-			Id:        deployment.BackendId,
-			UserId:    deployment.UserId,
-			StackName: deployment.Input.StackName,
-			Status:    "ACTIVE",
-			CreatedAt: time.Now(),
-		})
+		err = storageClient.DeleteBackend(ctx, backendId)
 		if err != nil {
 			return fmt.Errorf("failed to put backend: %w", err)
 		}
-		status = "successful"
-	}
-
-	opts := storage.DeploymentUpdateOptions{
-		Status: aws.String(status),
-	}
-	err = storageClient.UpdateDeployment(ctx, deploymentId, opts)
-	if err != nil {
-		return fmt.Errorf("failed to update deployment: %w", err)
+	} else {
+		opts := storage.BackendUpdateOptions{
+			Status: aws.String("delete-failed"),
+		}
+		err = storageClient.UpdateBackend(ctx, backendId, opts)
+		if err != nil {
+			return fmt.Errorf("failed to update backend: %w", err)
+		}
 	}
 
 	return nil
