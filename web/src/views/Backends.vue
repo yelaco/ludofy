@@ -102,7 +102,7 @@
     <!-- Notification Toast -->
     <div
       v-if="toastMessage"
-      class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-100 text-green-800 px-6 py-3 rounded-md shadow-lg z-50 text-sm animate-fade-in-out"
+      class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-100 text-green-800 px-6 py-3 rounded-md shadow-lg z-50 text-xm animate-fade-in-out"
     >
       {{ toastMessage }}
     </div>
