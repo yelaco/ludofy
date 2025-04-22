@@ -98,6 +98,14 @@
         </div>
       </div>
     </div>
+
+    <!-- Notification Toast -->
+    <div
+      v-if="toastMessage"
+      class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-100 text-green-800 px-6 py-3 rounded-md shadow-lg z-50 text-sm animate-fade-in-out"
+    >
+      {{ toastMessage }}
+    </div>
   </div>
 </template>
 
@@ -110,6 +118,15 @@ const backends = ref([]);
 const showDeleteDialog = ref(false);
 const backendIdToDelete = ref(null);
 const confirmationInput = ref("");
+
+const toastMessage = ref("");
+
+function showToast(message, duration = 3000) {
+  toastMessage.value = message;
+  setTimeout(() => {
+    toastMessage.value = "";
+  }, duration);
+}
 
 function formatDate(isoString) {
   if (!isoString) return "Unknown date";
@@ -134,11 +151,11 @@ async function confirmDeleteBackend() {
 
   try {
     await api.removeBackend(backendIdToDelete.value);
-    alert("Deletion request sent. Backend will disappear once fully removed.");
     closeDeleteDialog();
+    showToast("Backend deletion initiated.");
   } catch (error) {
     console.error("Failed to request backend deletion", error);
-    alert("Failed to request deletion. Please try again.");
+    showToast("Failed to request deletion. Please try again.");
   }
 }
 

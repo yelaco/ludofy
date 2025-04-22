@@ -14,8 +14,10 @@ Parameters:
     Type: String
   ServerImageUri:
     Type: String
+{{- if .ServerConfiguration.ContainerImage.IsPrivate }}
   RegistryCredentialsArn:
     Type: String
+{{- end }}
   DeploymentStage:
     Type: String
 
@@ -60,7 +62,7 @@ Resources:
               Value: !Ref AWS::Region
             - Name: ECS_ENABLE_CONTAINER_METADATA
               Value: "true"
-			- Name: MAX_MATCHES
+            - Name: MAX_MATCHES
               Value: {{ .ServerConfiguration.MaxMatches }}
 
   ### ECS Service ###
