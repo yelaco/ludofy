@@ -480,6 +480,8 @@ Resources:
       Runtime: provided.al2023
       Timeout: 10
       Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref StackName
         - DynamoDBCrudPolicy:
             TableName: !Ref Backends
         - Statement:
@@ -489,6 +491,7 @@ Resources:
               Resource: "*"
       Environment:
         Variables:
+          MAIN_BUCKET_NAME: !Ref StackName
           BACKENDS_TABLE_NAME: !Ref Backends
 
   BackendDeploymentGetFunction:

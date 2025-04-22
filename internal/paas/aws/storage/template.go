@@ -55,5 +55,13 @@ func (client *Client) RemoveTemplates(ctx context.Context, prefix string) error 
 		}
 	}
 
+	_, err := client.s3.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: client.cfg.MainBucketName,
+		Key:    aws.String(prefix),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete folder marker: %w", err)
+	}
+
 	return nil
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/batch"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/chess-vn/slchess/internal/paas/aws/storage"
 	"github.com/chess-vn/slchess/internal/paas/domains/dtos"
 	"github.com/chess-vn/slchess/internal/paas/domains/entities"
@@ -22,7 +23,10 @@ var (
 
 func init() {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
-	storageClient = storage.NewClient(dynamodb.NewFromConfig(cfg), nil)
+	storageClient = storage.NewClient(
+		dynamodb.NewFromConfig(cfg),
+		s3.NewFromConfig(cfg),
+	)
 	batchClient = batch.NewFromConfig(cfg)
 }
 
