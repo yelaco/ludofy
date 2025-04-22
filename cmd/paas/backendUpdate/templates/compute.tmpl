@@ -1,0 +1,310 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Compute Stack
+
+Globals:
+  Function:
+    Timeout: 10
+    MemorySize: 128
+    Architectures:
+      - arm64
+
+Parameters:
+  StackName:
+    Type: String
+  ServerImageUri:
+    Type: String
+{{- if .ServerConfiguration.ContainerImage.IsPrivate }}
+  RegistryCredentialsArn:
+    Type: String
+{{- end }}
+  DeploymentStage:
+    Type: String
+
+Resources:
+  ### ECS Cluster ###
+  ServerCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub "${StackName}-${DeploymentStage}-server-cluster"
+
+  ### Task Definition ###
+  ServerDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub "${StackName}-${DeploymentStage}-server"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: {{ mul .ServerConfiguration.InitialCpu 1024 }}
+      Memory: {{ .ServerConfiguration.InitialMemory }}
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt ServerRole.Arn
+      ContainerDefinitions:
+        - Image: !Ref ServerImageUri
+          Name: !Sub "${StackName}-${DeploymentStage}-server"
+{{- if .ServerConfiguration.ContainerImage.IsPrivate }}
+          RepositoryCredentials:
+            CredentialsParameter: !Ref RegistryCredentialsArn
+{{- end }}
+          Essential: true
+          PortMappings:
+            - ContainerPort: 7202
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub "/${StackName}/${DeploymentStage}/ecs/server"
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          Environment:
+            - Name: AWS_DEFAULT_REGION
+              Value: !Ref AWS::Region
+            - Name: ECS_ENABLE_CONTAINER_METADATA
+              Value: "true"
+            - Name: MAX_MATCHES
+              Value: {{ .ServerConfiguration.MaxMatches }}
+
+  ### ECS Service ###
+  ServerService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ServerCluster
+      ServiceName: !Sub "${StackName}-${DeploymentStage}-server-service"
+      LaunchType: FARGATE
+      DesiredCount: 0
+      TaskDefinition: !Ref ServerDefinition
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - subnet-08afaaea0b1e4f825
+            - subnet-0f7183aa53381f50c
+            - subnet-0642049eeace8e1b3
+          SecurityGroups:
+            - sg-003fd8c2326289ec4
+          AssignPublicIp: ENABLED
+
+  ### IAM Roles ###
+  ServerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${StackName}-ServerRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "ecs-tasks.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: LambdaInvokePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: "*"
+        - PolicyName: AppSyncAccessPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: appsync:GraphQL
+                Resource: !Sub
+                  - "${ApiArn}/*"
+                  - ApiArn:
+                      Fn::ImportValue: !Sub "${StackName}-AppSyncApiArn"
+        - PolicyName: DynamoDBAccessPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource:
+                  - Fn::ImportValue: !Sub "${StackName}-UserMatchesTableArn"
+                  - Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableArn"
+{{- if and .IncludeMatchSpectatingService .IncludeChatService }}
+                  - Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableArn"
+{{- end }}
+                  - Fn::ImportValue: !Sub "${StackName}-MatchStatesTableArn"
+                  - !Sub
+                    - "${MatchStatesTableArn}/index/MatchIndex"
+                    - MatchStatesTableArn:
+                        Fn::ImportValue: !Sub "${StackName}-MatchStatesTableArn"
+        - PolicyName: ECSTaskProtectionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecs:UpdateTaskProtection
+                Resource:
+                  - !Sub "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task/${ServerCluster}/*"
+
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${StackName}-ECSTaskExecutionRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ECSTaskExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:GetAuthorizationToken
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+        - PolicyName: SSMParameterAccessPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                Resource:
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${StackName}/*"
+
+  ### Auto Scaling ###
+  ServerAutoScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 2
+      MinCapacity: 0
+      ResourceId: !Sub service/${ServerCluster}/${ServerService.Name}
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  ServerAutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: ServerAutoScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ServerAutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 70.0
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 60
+
+  ### Lambda ###
+  EndGameFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-EndGame"
+      CodeUri: ../cmd/lambda/endGame/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Timeout: 10
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
+        - DynamoDBCrudPolicy:
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
+        - DynamoDBCrudPolicy:
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-MatchRecordsTableName"
+{{- if .IncludeRankingService }}
+        - DynamoDBCrudPolicy:
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-MatchResultsTableName"
+        - DynamoDBCrudPolicy:
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
+{{- end }}
+{{- if and .IncludeMatchSpectatingService .IncludeChatService }}
+        - DynamoDBCrudPolicy:
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
+{{- end }}
+      Environment:
+        Variables:
+          USER_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
+          ACTIVE_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
+          MATCH_STATES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchStatesTableName"
+          MATCH_RECORDS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchRecordsTableName"
+{{- if .IncludeRankingService }}
+          MATCH_RESULTS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchResultsTableName"
+          USER_RATINGS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
+{{- end }}
+{{- if and .IncludeMatchSpectatingService .IncludeChatService }}
+          SPECTATOR_CONVERSATIONS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
+{{- end }}
+
+  AbortGameFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-AbortGame"
+      CodeUri: ../cmd/lambda/abortGame/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Timeout: 10
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
+        - DynamoDBCrudPolicy:
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
+{{- if and .IncludeMatchSpectatingService .IncludeChatService }}
+        - DynamoDBCrudPolicy:
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
+{{- end }}
+      Environment:
+        Variables:
+          USER_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
+          ACTIVE_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
+{{- if and .IncludeMatchSpectatingService .IncludeChatService }}
+          SPECTATOR_CONVERSATIONS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
+{{- end }}
+
+Outputs:
+  ServerClusterName:
+    Value: !Ref ServerCluster
+    Export:
+      Name: !Sub "${StackName}-ServerClusterName"
+
+  ServerServiceName:
+    Value: !GetAtt ServerService.Name
+    Export:
+      Name: !Sub "${StackName}-ServerServiceName"
+
+  ServerDefinitionArn:
+    Value: !Ref ServerDefinition
+    Export:
+      Name: !Sub "${StackName}-ServerDefinitionArn"

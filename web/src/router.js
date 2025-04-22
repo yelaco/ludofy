@@ -3,6 +3,7 @@ import { userManager } from "@/auth";
 
 import Home from "./views/Home.vue";
 import DeployBackend from "./views/DeployBackend.vue";
+import UpdateBackend from "./views/UpdateBackend.vue";
 import BackendDetail from "./views/BackendDetail.vue";
 import Deployments from "./views/Deployments.vue";
 import Backends from "./views/Backends.vue";
@@ -18,6 +19,11 @@ const routes = [
     path: "/deploy",
     name: "DeployBackend",
     component: DeployBackend,
+  },
+  {
+    path: "/backend/:id/update",
+    name: "UpdateBackend",
+    component: UpdateBackend,
   },
   {
     path: "/backend/:id",

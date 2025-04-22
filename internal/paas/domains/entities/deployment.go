@@ -13,7 +13,6 @@ type Deployment struct {
 
 type DeployInput struct {
 	StackName                     string                        `dynamodbav:"StackName"`
-	ServerImageUri                string                        `dynamodbav:"ServerImageUri"`
 	IncludeChatService            bool                          `dynamodbav:"IncludeChatService"`
 	IncludeFriendService          bool                          `dynamodbav:"IncludeFriendService"`
 	IncludeRankingService         bool                          `dynamodbav:"IncludeRankingService"`
@@ -30,7 +29,7 @@ type MatchmakingConfigurationInput struct {
 
 type ServerConfigurationInput struct {
 	ContainerImage ContainerImageInput `dynamodbav:"ContainerImage"`
-	MaxMatches     int                 `dynamodbav:"MaxPlayers"`
+	MaxMatches     int                 `dynamodbav:"MaxMatches"`
 	InitialCpu     float64             `dynamodbav:"InitialCpu"`
 	InitialMemory  int                 `dynamodbav:"InitialMemory"`
 }

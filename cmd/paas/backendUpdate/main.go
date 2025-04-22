@@ -74,7 +74,6 @@ func handler(
 	error,
 ) {
 	userId := auth.MustAuth(event.RequestContext.Authorizer)
-	backendId := utils.GenerateUUID()
 	deploymentId := utils.GenerateUUID()
 
 	var input dtos.DeployInput
@@ -85,17 +84,16 @@ func handler(
 		}, fmt.Errorf("failed to unmarshal input: %w", err)
 	}
 
-	exist, err := storageClient.CheckExistedBackendStack(ctx, userId, input.StackName)
+	backend, err := storageClient.GetBackendByStackName(ctx, userId, input.StackName)
 	if err != nil {
+		if errors.Is(err, storage.ErrBackendNotFound) {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusNotFound,
+			}, nil
+		}
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-		}, fmt.Errorf("failed to check existed backend stack: %w", err)
-	}
-	if exist {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusFound,
-			Body:       "Stack with selected name already existed",
-		}, nil
+		}, fmt.Errorf("failed to check for existed backend stack: %w", err)
 	}
 
 	pending, err := storageClient.CheckPendingDeployment(ctx, userId)
@@ -136,7 +134,7 @@ func handler(
 			}, fmt.Errorf("failed to execute template: %w", err)
 		}
 
-		key := fmt.Sprintf("%s/%s/templates/%s.yaml", userId, backendId, stack)
+		key := fmt.Sprintf("%s/%s/templates/%s.yaml", userId, backend.Id, stack)
 		err = storageClient.UploadTemplate(ctx, key, buf)
 		if err != nil {
 			return events.APIGatewayProxyResponse{
@@ -206,7 +204,7 @@ func handler(
 				},
 				{
 					Name:  aws.String("BACKEND_ID"),
-					Value: aws.String(backendId),
+					Value: aws.String(backend.Id),
 				},
 			},
 		},
@@ -222,7 +220,7 @@ func handler(
 	deployment := entities.Deployment{
 		Id:        deploymentId,
 		UserId:    userId,
-		BackendId: backendId,
+		BackendId: backend.Id,
 		Status:    "pending",
 		Input:     dtos.DeployInputRequestToEntity(input),
 		CreatedAt: time.Now(),

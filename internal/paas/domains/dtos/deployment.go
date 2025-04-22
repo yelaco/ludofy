@@ -128,6 +128,5 @@ func DeployInputRequestToEntity(input DeployInput) entities.DeployInput {
 			InitialCpu:    input.ServerConfiguration.InitialCpu,
 			InitialMemory: input.ServerConfiguration.InitialMemory,
 		},
-		ServerImageUri: "",
 	}
 }

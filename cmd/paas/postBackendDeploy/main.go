@@ -43,12 +43,13 @@ func handler(ctx context.Context, event dtos.BackendDeployEvent) error {
 		return fmt.Errorf("deployment id not found for job with id: %s", event.JobId)
 	}
 
+	deployment, err := storageClient.GetDeployment(ctx, deploymentId)
+	if err != nil {
+		return fmt.Errorf("failed to get deployment: %w", err)
+	}
+
 	status := "failed"
 	if event.Status == "SUCCEEDED" {
-		deployment, err := storageClient.GetDeployment(ctx, deploymentId)
-		if err != nil {
-			return fmt.Errorf("failed to get deployment: %w", err)
-		}
 		err = storageClient.PutBackend(ctx, entities.Backend{
 			Id:        deployment.BackendId,
 			UserId:    deployment.UserId,
@@ -61,6 +62,9 @@ func handler(ctx context.Context, event dtos.BackendDeployEvent) error {
 			return fmt.Errorf("failed to put backend: %w", err)
 		}
 		status = "successful"
+	} else {
+		prefix := fmt.Sprintf("%s/%s/", deployment.UserId, deployment.BackendId)
+		storageClient.RemoveTemplates(ctx, prefix)
 	}
 
 	opts := storage.DeploymentUpdateOptions{

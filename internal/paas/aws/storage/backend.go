@@ -68,6 +68,37 @@ func (client *Client) CheckExistedBackendStack(
 	return len(output.Items) > 0, nil
 }
 
+func (client *Client) GetBackendByStackName(
+	ctx context.Context,
+	userId string,
+	stackName string,
+) (
+	entities.Backend,
+	error,
+) {
+	output, err := client.dynamodb.Query(ctx, &dynamodb.QueryInput{
+		TableName:              client.cfg.BackendsTableName,
+		IndexName:              aws.String("UserIndex"),
+		KeyConditionExpression: aws.String("UserId = :userId"),
+		FilterExpression:       aws.String("StackName = :stackName"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":userId":    &types.AttributeValueMemberS{Value: userId},
+			":stackName": &types.AttributeValueMemberS{Value: stackName},
+		},
+	})
+	if err != nil {
+		return entities.Backend{}, fmt.Errorf("failed to query backend: %w", err)
+	}
+	if len(output.Items) > 0 {
+		var backend entities.Backend
+		if err := attributevalue.UnmarshalMap(output.Items[0], &backend); err != nil {
+			return entities.Backend{}, fmt.Errorf("failed to unmarshal map: %w", err)
+		}
+		return backend, nil
+	}
+	return entities.Backend{}, ErrBackendNotFound
+}
+
 func (client *Client) FetchBackends(
 	ctx context.Context,
 	userId string,

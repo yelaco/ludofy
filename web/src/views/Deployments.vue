@@ -113,6 +113,10 @@
             ⚙️ <strong>Server Configuration:</strong>
             <ul class="list-disc list-inside ml-4">
               <li>
+                Max Matches:
+                {{ deployment.input.serverConfiguration.maxMatches }}
+              </li>
+              <li>
                 CPU: {{ deployment.input.serverConfiguration.initialCpu }} vCPU
               </li>
               <li>

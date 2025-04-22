@@ -41,10 +41,20 @@ func handler(ctx context.Context, event dtos.BackendRemoveEvent) error {
 		return fmt.Errorf("deployment id not found for job with id: %s", event.JobId)
 	}
 
+	backend, err := storageClient.GetBackend(ctx, backendId)
+	if err != nil {
+		return fmt.Errorf("failed to get backend: %w", err)
+	}
+
 	if event.Status == "SUCCEEDED" {
 		err = storageClient.DeleteBackend(ctx, backendId)
 		if err != nil {
 			return fmt.Errorf("failed to put backend: %w", err)
+		}
+		prefix := fmt.Sprintf("%s/%s/", backend.UserId, backend.Id)
+		err := storageClient.RemoveTemplates(ctx, prefix)
+		if err != nil {
+			return fmt.Errorf("failed to remove templates: %w", err)
 		}
 	} else {
 		opts := storage.BackendUpdateOptions{

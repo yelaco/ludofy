@@ -45,6 +45,41 @@ func (client *Client) CheckPendingDeployment(
 	return false, nil
 }
 
+func (client *Client) GetLatestSuccessfulDeployment(
+	ctx context.Context,
+	backendId string,
+) (
+	entities.Deployment,
+	error,
+) {
+	input := &dynamodb.QueryInput{
+		TableName:              client.cfg.DeploymentsTableName,
+		IndexName:              aws.String("BackendIndex"),
+		KeyConditionExpression: aws.String("BackendId = :backendId"),
+		FilterExpression:       aws.String("#stat = :stat"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":backendId": &types.AttributeValueMemberS{Value: backendId},
+			":stat":      &types.AttributeValueMemberS{Value: "successful"},
+		},
+		ExpressionAttributeNames: map[string]string{
+			"#stat": "Status",
+		},
+		ScanIndexForward: aws.Bool(false),
+	}
+	output, err := client.dynamodb.Query(ctx, input)
+	if err != nil {
+		return entities.Deployment{}, fmt.Errorf("failed to query deployments: %w", err)
+	}
+	if len(output.Items) > 0 {
+		var deployment entities.Deployment
+		if err := attributevalue.UnmarshalMap(output.Items[0], &deployment); err != nil {
+			return entities.Deployment{}, fmt.Errorf("failed to marshal map: %w", err)
+		}
+		return deployment, nil
+	}
+	return entities.Deployment{}, ErrDeploymentNotFound
+}
+
 func (client *Client) GetDeployment(
 	ctx context.Context,
 	id string,

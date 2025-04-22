@@ -153,16 +153,21 @@ async function confirmDeleteBackend() {
     await api.removeBackend(backendIdToDelete.value);
     closeDeleteDialog();
     showToast("Backend deletion initiated.");
+    loadBackends();
   } catch (error) {
     console.error("Failed to request backend deletion", error);
     showToast("Failed to request deletion. Please try again.");
   }
 }
 
+async function loadBackends() {
+  const response = await api.getBackends();
+  backends.value = response.data.items;
+}
+
 onMounted(async () => {
   try {
-    const response = await api.getBackends();
-    backends.value = response.data.items;
+    loadBackends();
   } catch (error) {
     console.error("Failed to fetch backends", error);
   }

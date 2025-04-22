@@ -31,9 +31,9 @@ func handler(
 	error,
 ) {
 	auth.MustAuth(event.RequestContext.Authorizer)
-	deploymentId := event.PathParameters["id"]
+	backendId := event.PathParameters["id"]
 
-	deployment, err := storageClient.GetDeployment(ctx, deploymentId)
+	deployment, err := storageClient.GetLatestSuccessfulDeployment(ctx, backendId)
 	if err != nil {
 		if errors.Is(err, storage.ErrDeploymentNotFound) {
 			return events.APIGatewayProxyResponse{
@@ -42,7 +42,7 @@ func handler(
 		}
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-		}, fmt.Errorf("failed to get deployment: %w", err)
+		}, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
 	resp := dtos.DeploymentResponseFromEntity(deployment)
@@ -52,6 +52,7 @@ func handler(
 			StatusCode: http.StatusInternalServerError,
 		}, fmt.Errorf("failed to marshal response: %w", err)
 	}
+
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(respJson),

@@ -1,6 +1,6 @@
 <template>
   <div class="p-6 max-w-4xl mx-auto">
-    <h1 class="text-3xl font-bold mb-6">Deploy New Game Backend</h1>
+    <h1 class="text-3xl font-bold mb-6">Update Game Backend</h1>
 
     <!-- Stack Name Input -->
     <div class="mb-6">
@@ -8,13 +8,9 @@
       <input
         type="text"
         v-model="stackName"
-        @input="validateField('stackName')"
-        :class="['input', errors.stackName ? 'border-red-500' : '']"
-        placeholder="Enter a stack name"
+        class="input bg-gray-100 cursor-not-allowed"
+        disabled
       />
-      <p v-if="errors.stackName" class="text-red-500 text-xs mt-1">
-        {{ errors.stackName }}
-      </p>
     </div>
 
     <ServiceSelector v-model="services" />
@@ -183,7 +179,7 @@
       @click="submit"
       class="w-full px-6 py-3 bg-green-600 text-white font-semibold rounded-lg text-lg hover:bg-green-700 shadow-md"
     >
-      🚀 Deploy
+      🚀 Update
     </button>
   </div>
 
@@ -202,13 +198,15 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { Eye, EyeOff } from "lucide-vue-next";
 import ServiceSelector from "@/components/ServiceSelector.vue";
 import api from "@/api";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 
 const router = useRouter();
+const route = useRoute();
+const id = route.params.id;
 
 const stackName = ref("");
 const services = ref({
@@ -237,7 +235,6 @@ const registryCredentials = ref({ username: "", password: "" });
 const toastMessage = ref("");
 const toastType = ref("success");
 const errors = ref({
-  stackName: "",
   serverImageUri: "",
   registryUsername: "",
   registryPassword: "",
@@ -357,7 +354,7 @@ async function submit() {
           isPrivate: privateRegistry.value,
           registryCredentials: registryCredentials.value,
         },
-        maxMatches: server.value.maxMatches,
+        maxMatches: server.maxMatches,
         initialCpu: server.value.cpu,
         initialMemory: server.value.memory,
       },
@@ -377,6 +374,29 @@ async function submit() {
     }
   }
 }
+
+onMounted(async () => {
+  const response = await api.getBackendDeployment(id);
+  const input = response.data.input;
+  stackName.value = input.stackName;
+  services.value = {
+    chat: input.includeChatService,
+    friend: input.includeFriendService,
+    ranking: input.includeRankingService,
+    matchSpectating: input.includeMatchSpectatingService,
+  };
+  matchmaking.value = input.matchmakingConfiguration || {};
+  server.value = {
+    cpu: input.serverConfiguration.initialCpu,
+    memory: input.serverConfiguration.initialMemory,
+    maxMatches: input.serverConfiguration.maxMatches,
+  };
+  serverImageUri.value = input.serverConfiguration?.containerImage?.uri || "";
+  privateRegistry.value =
+    input.serverConfiguration?.containerImage?.isPrivate || false;
+  registryCredentials.value =
+    input.serverConfiguration?.containerImage?.registryCredentials || {};
+});
 
 function showToast(message, type = "success", duration = 3000) {
   toastMessage.value = message;

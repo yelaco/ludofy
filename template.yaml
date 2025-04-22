@@ -362,6 +362,54 @@ Resources:
             Method: POST
             ApiId: !Ref HttpApi
 
+  BackendUpdateFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-BackendUpdate"
+      CodeUri: ./cmd/paas/backendUpdate/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Timeout: 10
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref StackName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - batch:SubmitJob
+                - batch:TagResource
+              Resource: "*"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:CreateSecret
+                - secretsmanager:UpdateSecret
+                - secretsmanager:PutSecretValue
+                - secretsmanager:TagResource
+                - secretsmanager:DescribeSecret
+              Resource: "*"
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Deployments
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Backends
+      Environment:
+        Variables:
+          MAIN_BUCKET_NAME: !Ref StackName
+          BATCH_JOB_NAME: "backend-deploy-job"
+          BATCH_JOB_QUEUE: !Ref BatchJobQueue
+          BATCH_JOB_DEFINITION: !Ref BackendDeployJobDefinition
+          DEPLOYMENTS_TABLE_NAME: !Ref Deployments
+          BACKENDS_TABLE_NAME: !Ref Backends
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /update
+            Method: POST
+            ApiId: !Ref HttpApi
+
   PostBackendDeployFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -371,12 +419,14 @@ Resources:
       CodeUri: ./cmd/paas/postBackendDeploy/
       Handler: bootstrap
       Runtime: provided.al2023
-      Timeout: 10
+      Timeout: 15
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref Deployments
         - DynamoDBCrudPolicy:
             TableName: !Ref Backends
+        - S3CrudPolicy:
+            BucketName: !Ref StackName
         - Statement:
             - Effect: Allow
               Action:
@@ -440,6 +490,29 @@ Resources:
       Environment:
         Variables:
           BACKENDS_TABLE_NAME: !Ref Backends
+
+  BackendDeploymentGetFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-BackendDeploymentGet"
+      CodeUri: ./cmd/paas/backendDeploymentGet/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Deployments
+      Environment:
+        Variables:
+          DEPLOYMENTS_TABLE_NAME: !Ref Deployments
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /backend/{id}/deployment
+            Method: GET
+            ApiId: !Ref HttpApi
 
   BackendGetFunction:
     Type: AWS::Serverless::Function
@@ -569,6 +642,8 @@ Resources:
           AttributeType: S
         - AttributeName: UserId
           AttributeType: S
+        - AttributeName: BackendId
+          AttributeType: S
         - AttributeName: CreatedAt
           AttributeType: S
       KeySchema:
@@ -578,6 +653,14 @@ Resources:
         - IndexName: UserIndex
           KeySchema:
             - AttributeName: UserId
+              KeyType: HASH
+            - AttributeName: CreatedAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: BackendIndex
+          KeySchema:
+            - AttributeName: BackendId
               KeyType: HASH
             - AttributeName: CreatedAt
               KeyType: RANGE
@@ -593,6 +676,10 @@ Outputs:
   BackendRemoveUrl:
     Description: "Endpoint URL for removing backend"
     Value: !Sub "DELETE https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}/backend/{id}"
+
+  BackendDeploymentUrl:
+    Description: "Endpoint URL for getting deployment information of a backend"
+    Value: !Sub "GET https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}/backend/{id}/deployment"
 
   BackendGetUrl:
     Description: "Endpoint URL for getting backend information"
