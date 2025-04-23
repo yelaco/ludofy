@@ -64,6 +64,18 @@ Resources:
               Value: "true"
             - Name: MAX_MATCHES
               Value: {{ .ServerConfiguration.MaxMatches }}
+            - Name: SERVER_PROTECTION_TIMEOUT
+              Value: "60m"
+            - Name: COGNITO_USER_POOL_ID
+              Value:
+                Fn::ImportValue: !Sub "${StackName}-UserPoolId"
+            - Name: APPSYNC_HTTP_URL
+              Value:
+                Fn::ImportValue: !Sub "${StackName}-AppSyncGraphQLApiUrl"
+            - Name: ABORT_GAME_FUNCTION_ARN
+              Value: !GetAtt AbortGameFunction.Arn
+            - Name: END_GAME_FUNCTION_ARN
+              Value: !GetAtt EndGameFunction.Arn
 
   ### ECS Service ###
   ServerService:

@@ -23,7 +23,7 @@ type errorResponse struct {
 
 func NewDefaultMatch(id string, players map[string]Player) Match {
 	return &DefaultMatch{
-		Id:      "",
+		Id:      id,
 		Players: players,
 		moveCh:  make(chan Move),
 		mu:      new(sync.Mutex),
@@ -32,9 +32,12 @@ func NewDefaultMatch(id string, players map[string]Player) Match {
 
 func (m *DefaultMatch) start() {
 	for move := range m.moveCh {
-		player, exist := m.Players[move.PlayerId]
+		player, exist := m.Players[move.GetPlayerId()]
 		if !exist {
-			// Notify
+			player.WriteJson(errorResponse{
+				Type:  "error",
+				Error: ErrStatusInvalidPlayerId,
+			})
 			continue
 		}
 		m.handler.HandleMove(m, player, move)
@@ -51,11 +54,13 @@ func (m *DefaultMatch) Abort() {
 	if !utils.IsClosed(m.moveCh) {
 		close(m.moveCh)
 	}
-	m.disconnectPlayers("match aborted", time.Now().Add(5*time.Second))
+	m.DisconnectPlayers("match aborted", time.Now().Add(5*time.Second))
+	m.handler.OnMatchAbort(m)
 	m.abortCallback(m)
 }
 
 func (m *DefaultMatch) Save() {
+	m.handler.OnMatchSave(m)
 	m.saveCallback(m)
 }
 
@@ -70,7 +75,7 @@ func (m *DefaultMatch) End() {
 		close(m.moveCh)
 	}
 	m.handler.OnMatchEnd(m)
-	m.disconnectPlayers("match ended", time.Now().Add(5*time.Second))
+	m.DisconnectPlayers("match ended", time.Now().Add(5*time.Second))
 	m.endCallback(m)
 }
 
@@ -83,6 +88,12 @@ func (m *DefaultMatch) GetPlayerWithId(id string) (Player, bool) {
 	return player, exist
 }
 
+func (m *DefaultMatch) IsEnded() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.ended
+}
+
 func (m *DefaultMatch) playerJoin(playerId string, conn *websocket.Conn) {
 	if m == nil {
 		return
@@ -93,6 +104,7 @@ func (m *DefaultMatch) playerJoin(playerId string, conn *websocket.Conn) {
 		logging.Fatal("invalid player id", zap.String("player_id", playerId))
 		return
 	}
+	m.handler.OnPlayerJoin(m, player)
 
 	player.setConn(conn)
 	m.handler.OnPlayerSync(m, player)
@@ -114,8 +126,8 @@ func (m *DefaultMatch) playerDisconnect(playerId string) {
 		logging.Fatal("invalid player id", zap.String("player_id", playerId))
 		return
 	}
-
 	player.setConn(nil)
+
 	m.handler.OnPlayerLeave(m, player)
 
 	m.notifyAboutPlayerStatus(playerStatusResponse{
@@ -140,7 +152,7 @@ func (m *DefaultMatch) notifyAboutPlayerStatus(resp playerStatusResponse) {
 	}
 }
 
-func (m *DefaultMatch) disconnectPlayers(msg string, deadline time.Time) {
+func (m *DefaultMatch) DisconnectPlayers(msg string, deadline time.Time) {
 	for _, player := range m.Players {
 		player.WriteControl(
 			websocket.CloseMessage,
@@ -175,8 +187,4 @@ func (m *DefaultMatch) GetId() string {
 
 func (m *DefaultMatch) GetPlayers() map[string]Player {
 	return m.Players
-}
-
-func (m *DefaultMatch) GetStartedAt() time.Time {
-	return m.StartedAt
 }

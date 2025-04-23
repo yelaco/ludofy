@@ -15,7 +15,6 @@ type PlayerState interface {
 	GetPlayerId() string
 }
 
-type Move struct {
-	PlayerId string      `dynamodbav:"PlayerId"`
-	Payload  interface{} `dynamodbav:"Payload"`
+type Move interface {
+	GetPlayerId() string
 }

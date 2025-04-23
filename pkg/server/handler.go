@@ -6,18 +6,18 @@ import (
 )
 
 type MatchHandler interface {
-	OnPlayerJoin(match Match, player Player)
-	OnPlayerLeave(match Match, player Player)
-	OnPlayerSync(match Match, player Player)
-	HandleMove(match Match, player Player, move Move)
-	OnMatchSave(match Match)
-	OnMatchEnd(match Match)
-	OnMatchAbort(match Match)
+	OnPlayerJoin(match Match, player Player) error
+	OnPlayerLeave(match Match, player Player) error
+	OnPlayerSync(match Match, player Player) error
+	HandleMove(match Match, player Player, move Move) error
+	OnMatchSave(match Match) error
+	OnMatchEnd(match Match) error
+	OnMatchAbort(match Match) error
 }
 
 type ServerHandler interface {
-	OnMatchCreate(match entities.ActiveMatch) (Match, error)
-	OnMatchResume(match entities.ActiveMatch, currentState entities.MatchState) (Match, error)
+	OnMatchCreate(activeMatch entities.ActiveMatch) (Match, error)
+	OnMatchResume(activeMatch entities.ActiveMatch, currentState entities.MatchState) (Match, error)
 	OnHandleMessage(playerId string, match Match, message []byte) error
 	OnHandleMatchEnd(record *dtos.MatchRecordRequest, match Match) error
 	OnHandleMatchSave(matchState *dtos.MatchStateRequest, match Match) error

@@ -1,18 +1,28 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/chess-vn/slchess/internal/aws/storage"
+	"github.com/chess-vn/slchess/pkg/logging"
 	"github.com/chess-vn/slchess/pkg/server"
+	"github.com/notnil/chess"
+	"go.uber.org/zap"
 )
 
 type Match struct {
 	server.Match
-	cfg MatchConfig
+	cfg   MatchConfig
+	game  *Game
+	timer *time.Timer
+
+	StartedAt time.Time
 }
 
 type MatchConfig struct {
@@ -36,6 +46,35 @@ var gameModes = []string{
 	"10+0", "10+5", // Rapid
 	"15+10", "25+10", // Rapid
 	"30+0", "45+15", "60+30", // Classical
+}
+
+type matchResponse struct {
+	Type      string            `json:"type"`
+	GameState gameStateResponse `json:"game"`
+}
+
+type gameStateResponse struct {
+	Outcome      string                `json:"outcome"`
+	Method       string                `json:"method"`
+	Fen          string                `json:"fen"`
+	PlayerStates []playerStateResponse `json:"playerStates"`
+}
+
+type playerStateResponse struct {
+	Id     string `json:"id"`
+	Clock  string `json:"clocks"`
+	Status string `json:"status"`
+}
+
+type drawOfferResponse struct {
+	Type      string `json:"type"`
+	Status    string `json:"status"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type errorResponse struct {
+	Type  string `json:"type"`
+	Error string `json:"error"`
 }
 
 func ValidateGameMode(gameMode string) error {
@@ -64,6 +103,136 @@ func ParseGameMode(gameMode string) (GameMode, error) {
 	}, nil
 }
 
+// setTimer method    set the timer to the specified duration before trigger end game handler
+func (m *Match) setTimer(d time.Duration) {
+	if m.timer != nil {
+		m.timer.Reset(d)
+		logging.Info(
+			"clock reset",
+			zap.String("match_id", m.GetId()),
+			zap.String("duration", d.String()),
+		)
+		return
+	}
+	m.timer = time.NewTimer(d)
+	go func() {
+		<-m.timer.C
+		m.End()
+	}()
+	logging.Info(
+		"clock set",
+		zap.String("match_id", m.GetId()),
+		zap.String("duration", d.String()),
+	)
+}
+
+// skipTimer method    skips timer by set timer to 0 duration timeout
+func (m *Match) skipTimer() {
+	if m.timer == nil {
+		logging.Info("clock nil", zap.String("match_id", m.GetId()))
+		return
+	}
+	m.timer.Reset(0)
+	logging.Info("clock skipped", zap.String("match_id", m.GetId()))
+}
+
+func (m *Match) currentPly() int {
+	return len(m.game.moves)
+}
+
+func (m *Match) getCurrentTurnPlayer() *Player {
+	side := BLACK_SIDE
+	if m.game.Position().Turn() == chess.White {
+		side = WHITE_SDIE
+	}
+	for _, player := range m.GetPlayers() {
+		if player.(*Player).Side == side {
+			return player.(*Player)
+		}
+	}
+
+	return nil
+}
+
+func (m *Match) calculateLagForgiven(moveCreatedAt time.Time) time.Duration {
+	lagTime := time.Since(moveCreatedAt)
+	if lagTime > m.cfg.MaxLagForgivenTime {
+		return m.cfg.MaxLagForgivenTime
+	}
+	return lagTime
+}
+
+func (m *Match) checkTimeout() {
+	var players []*Player
+	for _, player := range m.GetPlayers() {
+		players = append(players, player.(*Player))
+	}
+	if players[0].GetStatus() == CONNECTED &&
+		players[1].GetStatus() == CONNECTED {
+		return
+	}
+	if players[0].GetStatus() == INIT ||
+		players[1].GetStatus() == INIT {
+		m.DisconnectPlayers("match cancelled", time.Now().Add(5*time.Second))
+	}
+	if players[0].GetStatus() == DISCONNECTED &&
+		players[1].GetStatus() == CONNECTED {
+		m.game.DisconnectTimeout(players[0].Side)
+	} else if players[0].GetStatus() == CONNECTED &&
+		players[1].GetStatus() == DISCONNECTED {
+		m.game.DisconnectTimeout(players[1].Side)
+	} else if players[0].GetStatus() == DISCONNECTED &&
+		players[1].GetStatus() == DISCONNECTED {
+		m.game.DrawByTimeout()
+	}
+
+	gameStateResp := gameStateResponse{
+		Outcome:      m.game.outcome().String(),
+		Method:       m.game.method(),
+		Fen:          m.game.FEN(),
+		PlayerStates: make([]playerStateResponse, len(m.GetPlayers())),
+	}
+	for _, player := range m.GetPlayers() {
+		gameStateResp.PlayerStates = append(gameStateResp.PlayerStates, playerStateResponse{
+			Id:     player.GetId(),
+			Status: player.GetStatus(),
+			Clock:  player.(*Player).Clock.String(),
+		})
+	}
+	m.notifyPlayers(gameStateResp)
+}
+
+func (m *Match) notifyPlayers(resp gameStateResponse) {
+	for _, player := range m.GetPlayers() {
+		err := player.WriteJson(matchResponse{
+			Type:      "gameState",
+			GameState: resp,
+		})
+		if err != nil {
+			logging.Error(
+				"couldn't notify player: ",
+				zap.String("player_id", player.GetId()),
+			)
+		}
+	}
+}
+
+func (m *Match) sendDrawOfferNotification(sender *Player, status string) {
+	for _, player := range m.GetPlayers() {
+		if player.GetId() == sender.GetId() {
+			continue
+		}
+		err := player.WriteJson(drawOfferResponse{
+			Type:      "drawOffer",
+			Status:    status,
+			CreatedAt: time.Now().Format(time.RFC3339),
+		})
+		if err != nil {
+			logging.Error("couldn't send draw offer", zap.Error(err))
+		}
+	}
+}
+
 func ConfigForGameMode(gameMode string) (MatchConfig, error) {
 	gm, err := ParseGameMode(gameMode)
 	if err != nil {
@@ -83,44 +252,214 @@ func ConfigForGameMode(gameMode string) (MatchConfig, error) {
 type MyMatchHandler struct{}
 
 func (h *MyMatchHandler) OnPlayerJoin(
-	match server.Match,
-	player server.Player,
-) {
-	// do something
+	matchInterface server.Match,
+	playerInterface server.Player,
+) error {
+	match := matchInterface.(*Match)
+	player := playerInterface.(*Player)
+	if player.GetStatus() == INIT && player.Side == WHITE_SDIE {
+		match.StartedAt = time.Now()
+		player.TurnStartedAt = match.StartedAt
+		match.setTimer(match.cfg.MatchDuration)
+		err := server.GetStorageClient().UpdateActiveMatch(
+			context.Background(),
+			match.GetId(),
+			storage.ActiveMatchUpdateOptions{
+				StartedAt: aws.Time(match.StartedAt),
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("failed to update match: %w", err)
+		}
+	}
+	return nil
 }
 
 func (h *MyMatchHandler) OnPlayerLeave(
-	match server.Match,
-	player server.Player,
-) {
-	// do something
+	matchInterface server.Match,
+	playerInterface server.Player,
+) error {
+	match := matchInterface.(*Match)
+	currentClock := match.getCurrentTurnPlayer().Clock
+
+	if !match.IsEnded() {
+		allDisconnected := true
+		for _, player := range match.GetPlayers() {
+			if player.GetStatus() != DISCONNECTED {
+				allDisconnected = false
+			}
+		}
+
+		if allDisconnected {
+			match.setTimer(currentClock)
+		} else {
+			if currentClock < match.cfg.DisconnectTimeout {
+				match.setTimer(currentClock)
+			} else {
+				match.setTimer(match.cfg.DisconnectTimeout)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (h *MyMatchHandler) OnPlayerSync(
-	match server.Match,
-	player server.Player,
-) {
-	// do something
+	matchInterface server.Match,
+	playerInterface server.Player,
+) error {
+	match := matchInterface.(*Match)
+	player := playerInterface.(*Player)
+
+	resp := matchResponse{
+		Type: "gameState",
+		GameState: gameStateResponse{
+			Outcome:      match.game.outcome().String(),
+			Method:       match.game.method(),
+			Fen:          match.game.FEN(),
+			PlayerStates: make([]playerStateResponse, 0, len(match.GetPlayers())),
+		},
+	}
+
+	for _, player := range match.GetPlayers() {
+		resp.GameState.PlayerStates = append(resp.GameState.PlayerStates, playerStateResponse{
+			Id:     player.GetId(),
+			Status: player.GetStatus(),
+			Clock:  player.(*Player).Clock.String(),
+		})
+	}
+
+	err := player.WriteJson(resp)
+	if err != nil {
+		return fmt.Errorf("couldn't sync player: %w", err)
+	}
+	return nil
 }
 
 func (h *MyMatchHandler) HandleMove(
-	match server.Match,
-	player server.Player,
-	move server.Move,
-) {
-	// do something
+	matchInterface server.Match,
+	playerInterface server.Player,
+	moveInterface server.Move,
+) error {
+	match := matchInterface.(*Match)
+	player := playerInterface.(*Player)
+	move := moveInterface.(*Move)
+	switch move.Control {
+	case ABORT:
+		if match.currentPly() > 1 {
+			player.WriteJson(errorResponse{
+				Type:  "error",
+				Error: "INVALID_PLY",
+			})
+		}
+		match.Abort()
+		return nil
+	case RESIGN:
+		match.game.Resign(player.Color())
+	case OFFER_DRAW:
+		draw := match.game.OfferDraw(player.Color())
+		if !draw {
+			match.sendDrawOfferNotification(player, DRAW_PENDING)
+			return nil
+		}
+	case DECLINE_DRAW:
+		shouldNotify := match.game.DeclineDraw(player.Color())
+		if shouldNotify {
+			match.sendDrawOfferNotification(player, DRAW_DECLINED)
+		}
+		return nil
+	default:
+		if expectedId := match.getCurrentTurnPlayer().GetId(); player.GetId() != expectedId {
+			player.WriteJson(errorResponse{
+				Type: "error",
+				Error: fmt.Sprintf(
+					"%s: want %s - got %s",
+					"WRONG_TURN",
+					expectedId,
+					player.GetId(),
+				),
+			})
+			return nil
+		}
+		err := match.game.move(move)
+		if err != nil {
+			player.WriteJson(errorResponse{
+				Type:  "error",
+				Error: "INVALID_MOVE",
+			})
+			return nil
+		}
+
+		// If making move, update clock
+		timeTaken := time.Since(player.TurnStartedAt)
+		lagForgiven := match.calculateLagForgiven(move.CreatedAt)
+		player.UpdateClock(timeTaken, lagForgiven, match.cfg.ClockIncrement)
+
+		// If clock runs out, end the game
+		if player.Clock <= 0 {
+			match.game.OutOfTime(player.Side)
+			logging.Info("out of time", zap.String("player_id", player.GetId()))
+		} else {
+			// else next turn
+			currentTurnPlayer := match.getCurrentTurnPlayer()
+			currentTurnPlayer.TurnStartedAt = time.Now()
+			match.setTimer(currentTurnPlayer.Clock)
+			logging.Info(
+				"new turn",
+				zap.String("player_id", currentTurnPlayer.GetId()),
+				zap.String("clock", currentTurnPlayer.Clock.String()),
+			)
+		}
+	}
+
+	gameStateResp := gameStateResponse{
+		Outcome:      match.game.outcome().String(),
+		Method:       match.game.method(),
+		Fen:          match.game.FEN(),
+		PlayerStates: make([]playerStateResponse, len(match.GetPlayers())),
+	}
+	for _, player := range match.GetPlayers() {
+		gameStateResp.PlayerStates = append(gameStateResp.PlayerStates, playerStateResponse{
+			Id:     player.GetId(),
+			Status: player.GetStatus(),
+			Clock:  player.(*Player).Clock.String(),
+		})
+	}
+	match.notifyPlayers(gameStateResp)
+
+	// Save game state
+	match.Save()
+
+	// Aborted because both player had disconnected
+	if match.IsEnded() {
+		return nil
+	}
+
+	// Check if game ended
+	if match.game.Outcome() != chess.NoOutcome {
+		logging.Info(
+			"Game end by outcome",
+			zap.String("outcome", match.game.Outcome().String()),
+			zap.String("method", match.game.method()),
+		)
+		match.End()
+	}
+	return nil
 }
 
-func (h *MyMatchHandler) OnMatchSave(match server.Match) {
-	// do something
+func (h *MyMatchHandler) OnMatchAbort(match server.Match) error {
+	return nil
 }
 
-func (h *MyMatchHandler) OnMatchEnd(match server.Match) {
-	// do something
+func (h *MyMatchHandler) OnMatchSave(match server.Match) error {
+	return nil
 }
 
-func (h *MyMatchHandler) OnMatchAbort(match server.Match) {
-	// do something
+func (h *MyMatchHandler) OnMatchEnd(matchInterface server.Match) error {
+	match := matchInterface.(*Match)
+	match.skipTimer()
+	match.checkTimeout()
+	return nil
 }
 
 func NewMatchHandler() server.MatchHandler {

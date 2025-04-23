@@ -23,9 +23,8 @@ type PlayerStateRequest interface {
 	GetPlayerId() string
 }
 
-type MoveRequest struct {
-	PlayerId string      `json:"playerId"`
-	Payload  interface{} `json:"payload"`
+type MoveRequest interface {
+	GetPlayerId() string
 }
 
 type MatchStateAppSyncRequest struct {
@@ -37,9 +36,8 @@ type PlayerStateResponse interface {
 	GetPlayerId() string
 }
 
-type MoveResponse struct {
-	PlayerId string      `json:"playerId"`
-	Payload  interface{} `json:"payload"`
+type MoveResponse interface {
+	GetPlayerId() string
 }
 
 type MatchStateResponse struct {
@@ -76,11 +74,8 @@ func MatchStateRequestToEntity(req MatchStateRequest) entities.MatchState {
 		MatchId:      req.MatchId,
 		PlayerStates: make([]entities.PlayerState, 0, len(req.PlayerStates)),
 		GameState:    req.GameState,
-		Move: entities.Move{
-			PlayerId: req.Move.PlayerId,
-			Payload:  req.Move.Payload,
-		},
-		Timestamp: req.Timestamp,
+		Move:         req.Move,
+		Timestamp:    req.Timestamp,
 	}
 	for _, playerState := range req.PlayerStates {
 		matchState.PlayerStates = append(matchState.PlayerStates, playerState)
@@ -93,10 +88,7 @@ func MatchStateResponseFromEntitiy(matchState entities.MatchState) MatchStateRes
 		Id:        matchState.Id,
 		MatchId:   matchState.MatchId,
 		GameState: matchState.GameState,
-		Move: MoveResponse{
-			PlayerId: matchState.Move.PlayerId,
-			Payload:  matchState.Move.Payload,
-		},
+		Move:      matchState.Move,
 		Timestamp: matchState.Timestamp,
 	}
 	for _, playerState := range matchState.PlayerStates {

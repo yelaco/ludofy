@@ -4,28 +4,13 @@ import (
 	"time"
 
 	"github.com/chess-vn/slchess/pkg/server"
-)
-
-type (
-	Side        bool
-	GameControl uint8
+	"github.com/notnil/chess"
 )
 
 const (
-	WHITE_SDIE Side = true
-	BLACK_SIDE Side = false
-
-	ABORT GameControl = iota
-	RESIGN
-	OFFER_DRAW
-	DECLINE_DRAW
-	NONE
-
-	BLACK_OUT_OF_TIME        = "BLACK_OUT_OF_TIME"
-	WHITE_OUT_OF_TIME        = "WHITE_OUT_OF_TIME"
-	BLACK_DISCONNECT_TIMEOUT = "BLACK_DISCONNECT_TIMEOUT"
-	WHITE_DISCONNECT_TIMEOUT = "WHITE_DISCONNECT_TIMEOUT"
-	DRAW_BY_TIMEOUT          = "DRAW_BY_TIMEOUT"
+	INIT         = "INIT"
+	CONNECTED    = "CONNECTED"
+	DISCONNECTED = "DISCONNECTED"
 )
 
 type Player struct {
@@ -35,4 +20,19 @@ type Player struct {
 	Clock         time.Duration
 	Side          Side
 	TurnStartedAt time.Time
+}
+
+func (p *Player) UpdateClock(
+	timeTaken time.Duration,
+	lagForgiven time.Duration,
+	increment time.Duration,
+) {
+	p.Clock = p.Clock - timeTaken + lagForgiven + increment
+}
+
+func (p *Player) Color() chess.Color {
+	if p.Side == WHITE_SDIE {
+		return chess.White
+	}
+	return chess.Black
 }

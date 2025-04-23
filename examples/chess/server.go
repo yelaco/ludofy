@@ -1,42 +1,75 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/chess-vn/slchess/internal/domains/dtos"
 	"github.com/chess-vn/slchess/internal/domains/entities"
 	"github.com/chess-vn/slchess/pkg/server"
 )
 
+type Payload struct {
+	Type      string            `json:"type"`
+	Data      map[string]string `json:"data"`
+	CreatedAt time.Time         `json:"createdAt"`
+}
+
 /*
  * Implement ServerHandler interface
  */
 type MyServerHandler struct{}
 
-func (h *MyServerHandler) OnMatchCreate(match entities.ActiveMatch) (server.Match, error) {
-	cfg, err := ConfigForGameMode(match.GameMode)
+func (h *MyServerHandler) OnMatchCreate(activeMatch entities.ActiveMatch) (server.Match, error) {
+	cfg, err := ConfigForGameMode(activeMatch.GameMode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get config: %w", err)
 	}
-	players := make(map[string]server.Player, len(match.Players))
-	for i, player := range match.Players {
+	players := make(map[string]server.Player, len(activeMatch.Players))
+	for i, player := range activeMatch.Players {
 		players[player.Id] = &Player{
-			Player: server.NewDefaultPlayer(player.Id, match.MatchId),
+			Player: server.NewDefaultPlayer(player.Id, activeMatch.MatchId),
 			Clock:  cfg.MatchDuration,
 			Side:   i%2 == 0,
 		}
 	}
-	return Match{
-		Match: server.NewDefaultMatch(match.MatchId, players),
+	match := Match{
+		Match: server.NewDefaultMatch(activeMatch.MatchId, players),
 		cfg:   cfg,
-	}, nil
+		game:  NewGame(),
+	}
+	match.setTimer(cfg.CancelTimeout)
+	return match, nil
 }
 
 func (h *MyServerHandler) OnMatchResume(
-	match entities.ActiveMatch,
+	activeMatch entities.ActiveMatch,
 	currentState entities.MatchState,
 ) (server.Match, error) {
-	return nil, nil
+	cfg, err := ConfigForGameMode(activeMatch.GameMode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get config: %w", err)
+	}
+	players := make(map[string]server.Player, len(activeMatch.Players))
+	for i, player := range activeMatch.Players {
+		players[player.Id] = &Player{
+			Player: server.NewDefaultPlayer(player.Id, activeMatch.MatchId),
+			Clock:  cfg.MatchDuration,
+			Side:   i%2 == 0,
+		}
+	}
+	game, err := RestoreGame(currentState.GameState.(string))
+	if err != nil {
+		return nil, fmt.Errorf("failed to restore game: %w", err)
+	}
+	match := Match{
+		Match: server.NewDefaultMatch(activeMatch.MatchId, players),
+		cfg:   cfg,
+		game:  game,
+	}
+	match.setTimer(cfg.CancelTimeout)
+	return match, nil
 }
 
 func (h *MyServerHandler) OnHandleMessage(
@@ -44,20 +77,73 @@ func (h *MyServerHandler) OnHandleMessage(
 	match server.Match,
 	message []byte,
 ) error {
+	var payload Payload
+	if err := json.Unmarshal(message, &payload); err != nil {
+		return fmt.Errorf("failed to unmarshal message: %w", err)
+	}
+	if payload.CreatedAt.Sub(time.Now()) > 2*time.Second {
+		return fmt.Errorf("invalid timestamp")
+	}
+	switch payload.Type {
+	case "gameData":
+		move := NewMove(playerId)
+		action := payload.Data["action"]
+		switch action {
+		case "abort":
+			move.Control = ABORT
+		case "resign":
+			move.Control = RESIGN
+		case "offerDraw":
+			move.Control = OFFER_DRAW
+		case "declineDraw":
+			move.Control = DECLINE_DRAW
+		case "move":
+			move.Uci = payload.Data["move"]
+			move.CreatedAt = payload.CreatedAt
+		default:
+			return fmt.Errorf("invalid game action: %s", payload.Type)
+		}
+		match.ProcessMove(move)
+	default:
+		return fmt.Errorf("invalid payload type: %s", payload.Type)
+	}
 	return nil
 }
 
 func (h *MyServerHandler) OnHandleMatchEnd(
 	record *dtos.MatchRecordRequest,
-	match server.Match,
+	matchInterface server.Match,
 ) error {
+	match := matchInterface.(*Match)
+	record.Players = make([]dtos.PlayerRecordRequest, 0, len(match.GetPlayers()))
+	for _, player := range match.GetPlayers() {
+		record.Players = append(record.Players, PlayerRecord{
+			Id: player.GetId(),
+		})
+	}
+	record.StartedAt = match.StartedAt
+	record.EndedAt = time.Now()
 	return nil
 }
 
 func (h *MyServerHandler) OnHandleMatchSave(
 	matchState *dtos.MatchStateRequest,
-	match server.Match,
+	matchInterface server.Match,
 ) error {
+	match := matchInterface.(*Match)
+	lastMove := match.game.lastMove()
+	matchState.PlayerStates = make([]dtos.PlayerStateRequest, 0, len(match.GetPlayers()))
+	for _, player := range match.GetPlayers() {
+		matchState.PlayerStates = append(matchState.PlayerStates, PlayerState{
+			Id: player.GetId(),
+		})
+	}
+	matchState.Move = MoveRequest{
+		PlayerId:  lastMove.GetPlayerId(),
+		Uci:       lastMove.Uci,
+		Control:   lastMove.Control,
+		CreatedAt: lastMove.CreatedAt,
+	}
 	return nil
 }
 

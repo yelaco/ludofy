@@ -39,18 +39,19 @@ func NewFromConfig(cfg Config) Server {
 				return true
 			},
 		},
-		mu:  new(sync.Mutex),
-		cfg: cfg,
-		storageClient: storage.NewClient(
-			dynamodb.NewFromConfig(cfg.awsCfg),
-		),
-		computeClient: compute.NewClient(
-			ecs.NewFromConfig(cfg.awsCfg),
-			nil,
-		),
-		lambdaClient: lambda.NewFromConfig(cfg.awsCfg),
-		handler:      cfg.ServerHandler,
+		mu:      new(sync.Mutex),
+		cfg:     cfg,
+		handler: cfg.ServerHandler,
 	}
+	storageClient = storage.NewClient(
+		dynamodb.NewFromConfig(cfg.awsCfg),
+	)
+	computeClient = compute.NewClient(
+		ecs.NewFromConfig(cfg.awsCfg),
+		nil,
+	)
+	lambdaClient = lambda.NewFromConfig(cfg.awsCfg)
+
 	srv.resetProtectionTimer(cfg.protectionTimeout)
 	return srv
 }
@@ -128,19 +129,30 @@ func (s *DefaultServer) Start() error {
 				break
 			}
 
-			s.HandleMessage(playerId, match, message)
+			err = s.HandleMessage(playerId, match, message)
+			if err != nil {
+				logging.Error("failed to handle message", zap.Error(err))
+				conn.WriteControl(
+					websocket.CloseNormalClosure,
+					nil,
+					time.Now().Add(5*time.Second),
+				)
+			}
 		}
 	})
 	logging.Info("websocket server started", zap.String("port", s.cfg.Port))
 	return http.ListenAndServe(s.address, nil)
 }
 
-func (s *DefaultServer) HandleMessage(playerId string, match Match, msg []byte) {
+func (s *DefaultServer) HandleMessage(playerId string, match Match, msg []byte) error {
 	if match == nil {
-		logging.Error("match not loaded")
-		return
+		return fmt.Errorf("match not loaded")
 	}
-	s.handler.OnHandleMessage(playerId, match, msg)
+	err := s.handler.OnHandleMessage(playerId, match, msg)
+	if err != nil {
+		return fmt.Errorf("on handle message: %w", err)
+	}
+	return nil
 }
 
 func (s *DefaultServer) HandleMatchEnd(match Match) {
@@ -148,9 +160,8 @@ func (s *DefaultServer) HandleMatchEnd(match Match) {
 		return
 	}
 	matchRecordReq := dtos.MatchRecordRequest{
-		MatchId:   match.GetId(),
-		StartedAt: match.GetStartedAt(),
-		EndedAt:   time.Now(),
+		MatchId: match.GetId(),
+		EndedAt: time.Now(),
 	}
 
 	if err := s.handler.OnHandleMatchEnd(&matchRecordReq, match); err != nil {
@@ -163,7 +174,7 @@ func (s *DefaultServer) HandleMatchEnd(match Match) {
 	}
 
 	// Invoke Lambda function
-	_, err = s.lambdaClient.Invoke(context.TODO(), &lambda.InvokeInput{
+	_, err = lambdaClient.Invoke(context.TODO(), &lambda.InvokeInput{
 		FunctionName:   aws.String(s.cfg.endGameFunctionArn),
 		Payload:        payload,
 		InvocationType: types.InvocationTypeRequestResponse,
@@ -309,7 +320,7 @@ func (s *DefaultServer) auth(r *http.Request) (string, error) {
 func (s *DefaultServer) loadMatch(matchId string) (Match, error) {
 	ctx := context.Background()
 
-	activeMatch, err := s.storageClient.GetActiveMatch(ctx, matchId)
+	activeMatch, err := storageClient.GetActiveMatch(ctx, matchId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get active match: %w", err)
 	}
@@ -326,7 +337,7 @@ func (s *DefaultServer) loadMatch(matchId string) (Match, error) {
 		}
 		return nil, ErrFailedToLoadMatch
 	} else {
-		matchStates, _, err := s.storageClient.FetchMatchStates(
+		matchStates, _, err := storageClient.FetchMatchStates(
 			ctx,
 			matchId,
 			nil,
@@ -382,7 +393,7 @@ func (s *DefaultServer) skipProtectionTimer() {
 }
 
 func (s *DefaultServer) enableProtection() {
-	err := s.computeClient.UpdateServerProtection(context.TODO(), true)
+	err := computeClient.UpdateServerProtection(context.TODO(), true)
 	if err != nil {
 		logging.Info("failed to enable server protection", zap.Error(err))
 		return
@@ -391,7 +402,7 @@ func (s *DefaultServer) enableProtection() {
 }
 
 func (s *DefaultServer) disableProtection() {
-	err := s.computeClient.UpdateServerProtection(context.TODO(), false)
+	err := computeClient.UpdateServerProtection(context.TODO(), false)
 	if err != nil {
 		logging.Info("failed to disable server protection", zap.Error(err))
 		return
