@@ -43,6 +43,9 @@
         </div>
       </div>
 
+      <!-- Monitoring Dashboard -->
+      <BackendMonitoring :backend-id="backend.id" />
+
       <!-- Outputs Section -->
       <div class="bg-white p-6 rounded shadow">
         <div class="flex items-center justify-between mb-4">
@@ -154,6 +157,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import BackendMonitoring from "@/components/monitoring/BackendMonitoring.vue";
 import api from "@/api";
 
 const route = useRoute();
