@@ -35,6 +35,7 @@
                   deployment.status === 'successful',
                 'bg-yellow-100 text-yellow-700':
                   deployment.status === 'pending',
+                'bg-sky-100 text-sky-700': deployment.status === 'deploying',
                 'bg-red-100 text-red-700': deployment.status === 'failed',
               }"
             >

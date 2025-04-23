@@ -52,8 +52,9 @@ func handler(ctx context.Context, event dtos.BackendDeployEvent) error {
 		return fmt.Errorf("failed to get deployment: %w", err)
 	}
 
-	status := "failed"
-	if event.Status == "SUCCEEDED" {
+	var status string
+	switch event.Status {
+	case "SUCCEEDED":
 		err = storageClient.PutBackend(ctx, entities.Backend{
 			Id:        deployment.BackendId,
 			UserId:    deployment.UserId,
@@ -66,9 +67,14 @@ func handler(ctx context.Context, event dtos.BackendDeployEvent) error {
 			return fmt.Errorf("failed to put backend: %w", err)
 		}
 		status = "successful"
-	} else {
+	case "FAILED":
 		prefix := fmt.Sprintf("%s/%s/", deployment.UserId, deployment.BackendId)
 		storageClient.RemoveTemplates(ctx, prefix)
+		status = "failed"
+	case "RUNNING":
+		status = "deploying"
+	default:
+		return fmt.Errorf("unknown status: %s", event.Status)
 	}
 
 	opts := storage.DeploymentUpdateOptions{

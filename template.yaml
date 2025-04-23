@@ -217,6 +217,7 @@ Resources:
           - Batch Job State Change
         detail:
           status:
+            - RUNNING
             - SUCCEEDED
             - FAILED
           jobName:

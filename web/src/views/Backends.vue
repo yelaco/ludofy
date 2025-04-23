@@ -46,7 +46,7 @@
 
           <button
             class="text-red-500 text-sm hover:underline"
-            @click="openDeleteDialog(backend.id)"
+            @click="openDeleteDialog(backend.id, backend.stackName)"
           >
             🗑 Delete
           </button>
@@ -64,6 +64,9 @@
         <p class="text-gray-700 mb-2">
           This action is <strong>irreversible</strong>. Deleting this backend
           will permanently remove all associated resources.
+        </p>
+        <p class="text-gray-700 mb-2">
+          Stack name: <strong>{{ stackNameToDelete }}</strong>
         </p>
         <p class="text-gray-700 mb-4">
           Please type <strong>"permanently delete"</strong> below to confirm:
@@ -117,6 +120,7 @@ const backends = ref([]);
 
 const showDeleteDialog = ref(false);
 const backendIdToDelete = ref(null);
+const stackNameToDelete = ref(null);
 const confirmationInput = ref("");
 
 const toastMessage = ref("");
@@ -134,14 +138,16 @@ function formatDate(isoString) {
   return date.toLocaleString();
 }
 
-function openDeleteDialog(id) {
+function openDeleteDialog(id, stackName) {
   backendIdToDelete.value = id;
+  stackNameToDelete.value = stackName;
   confirmationInput.value = "";
   showDeleteDialog.value = true;
 }
 
 function closeDeleteDialog() {
   backendIdToDelete.value = null;
+  stackNameToDelete.value = null;
   confirmationInput.value = "";
   showDeleteDialog.value = false;
 }

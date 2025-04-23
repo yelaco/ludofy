@@ -35,14 +35,22 @@
 </template>
 
 <script setup>
-import { reactive } from "vue";
+import { reactive, watch } from "vue";
 
 const props = defineProps({ modelValue: Object });
 const emit = defineEmits(["update:modelValue"]);
 
 const local = reactive({ ...props.modelValue });
 
+// Keep the local state in sync if parent updates modelValue
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    Object.assign(local, newVal);
+  },
+);
+
 function emitUpdate() {
-  emit("update:modelValue", local);
+  emit("update:modelValue", { ...local });
 }
 </script>
