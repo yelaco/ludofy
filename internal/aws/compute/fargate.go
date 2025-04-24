@@ -14,7 +14,7 @@ import (
 	"github.com/chess-vn/slchess/pkg/logging"
 )
 
-var ErrNoServerAvailable = fmt.Errorf("no server available")
+var ErrNoServerRunning = fmt.Errorf("no server available")
 
 type TaskMetadata struct {
 	TaskArn     string `json:"TaskARN"`
@@ -145,7 +145,7 @@ func (client *Client) CheckAndGetNewServerIp(
 		}
 	}
 	if newServerIp == nil {
-		return "", ErrNoServerAvailable
+		return "", ErrNoServerRunning
 	}
 
 	return *newServerIp, nil
@@ -163,7 +163,7 @@ func (client *Client) GetServerIps(
 		DesiredStatus: "RUNNING",
 	})
 	if err != nil || len(listTasksOutput.TaskArns) == 0 {
-		return nil, fmt.Errorf("no running tasks found or error occurred: %v", err)
+		return nil, ErrNoServerRunning
 	}
 
 	describeTasksOutput, err := client.ecs.DescribeTasks(

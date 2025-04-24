@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -49,9 +50,11 @@ func handler(
 
 	serverIps, err := computeClient.GetServerIps(ctx, clusterName, serviceName)
 	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-		}, fmt.Errorf("failed to get server ips: %w", err)
+		if !errors.Is(err, compute.ErrNoServerRunning) {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusInternalServerError,
+			}, fmt.Errorf("failed to get server ips: %w", err)
+		}
 	}
 
 	serverStatuses := make([]dtos.ServerStatusResponse, 0, len(serverIps))
