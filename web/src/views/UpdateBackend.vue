@@ -354,7 +354,7 @@ async function submit() {
           isPrivate: privateRegistry.value,
           registryCredentials: registryCredentials.value,
         },
-        maxMatches: server.maxMatches,
+        maxMatches: server.value.maxMatches,
         initialCpu: server.value.cpu,
         initialMemory: server.value.memory,
       },
