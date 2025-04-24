@@ -6,7 +6,7 @@ import (
 )
 
 type MatchHandler interface {
-	OnPlayerJoin(match Match, player Player) error
+	OnPlayerJoin(match Match, player Player) (bool, error)
 	OnPlayerLeave(match Match, player Player) error
 	OnPlayerSync(match Match, player Player) error
 	HandleMove(match Match, player Player, move Move) error

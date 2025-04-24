@@ -11,15 +11,3 @@ var (
 	computeClient *compute.Client
 	lambdaClient  *lambda.Client
 )
-
-func GetStorageClient() *storage.Client {
-	return storageClient
-}
-
-func GetComputeClient() *compute.Client {
-	return computeClient
-}
-
-func GetLambdaClient() *lambda.Client {
-	return lambdaClient
-}

@@ -1,15 +1,12 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/chess-vn/slchess/internal/aws/storage"
 	"github.com/chess-vn/slchess/pkg/logging"
 	"github.com/chess-vn/slchess/pkg/server"
 	"github.com/notnil/chess"
@@ -254,25 +251,16 @@ type MyMatchHandler struct{}
 func (h *MyMatchHandler) OnPlayerJoin(
 	matchInterface server.Match,
 	playerInterface server.Player,
-) error {
+) (bool, error) {
 	match := matchInterface.(*Match)
 	player := playerInterface.(*Player)
 	if player.GetStatus() == INIT && player.Side == WHITE_SDIE {
 		match.StartedAt = time.Now()
 		player.TurnStartedAt = match.StartedAt
 		match.setTimer(match.cfg.MatchDuration)
-		err := server.GetStorageClient().UpdateActiveMatch(
-			context.Background(),
-			match.GetId(),
-			storage.ActiveMatchUpdateOptions{
-				StartedAt: aws.Time(match.StartedAt),
-			},
-		)
-		if err != nil {
-			return fmt.Errorf("failed to update match: %w", err)
-		}
+		return true, nil
 	}
-	return nil
+	return false, nil
 }
 
 func (h *MyMatchHandler) OnPlayerLeave(

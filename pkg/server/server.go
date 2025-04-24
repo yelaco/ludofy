@@ -13,7 +13,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
@@ -260,11 +259,6 @@ func (s *DefaultServer) HandleMatchAbort(match Match) {
 		return
 	}
 	ctx := context.TODO()
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		logging.Fatal("unable to load SDK config", zap.Error(err))
-	}
-	lambdaClient := lambda.NewFromConfig(cfg)
 
 	matchAbortReq := dtos.MatchAbortRequest{
 		MatchId:   match.GetId(),
