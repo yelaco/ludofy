@@ -193,3 +193,8 @@ Outputs:
     Value: !Ref AppSyncApi
     Export:
       Name: !Sub "${StackName}-AppSyncApiArn"
+
+  AppSyncAccessRoleArn:
+    Value: !GetAtt AppSyncAccessRole.Arn
+    Export:
+      Name: !Sub "${StackName}-AppSyncAccessRoleArn"

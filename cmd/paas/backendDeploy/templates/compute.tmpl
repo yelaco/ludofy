@@ -72,6 +72,9 @@ Resources:
             - Name: APPSYNC_HTTP_URL
               Value:
                 Fn::ImportValue: !Sub "${StackName}-AppSyncGraphQLApiUrl"
+            - Name: APPSYNC_ACCESS_ROLE_ARN
+              Value:
+                Fn::ImportValue: !Sub "${StackName}-AppSyncAccessRoleArn"
             - Name: ACTIVE_MATCHES_TABLE_NAME
               Value:
                 Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"

@@ -45,6 +45,7 @@ func NewConfig(port string, serverHandler ServerHandler, matchHandler MatchHandl
 		ServerHandler:        serverHandler,
 		cognitoUserPoolId:    viper.GetString("COGNITO_USER_POOL_ID"),
 		appSyncHttpUrl:       viper.GetString("APPSYNC_HTTP_URL"),
+		appSyncAccessRoleArn: viper.GetString("APPSYNC_ACCESS_ROLE_ARN"),
 		abortGameFunctionArn: viper.GetString("ABORT_GAME_FUNCTION_ARN"),
 		endGameFunctionArn:   viper.GetString("END_GAME_FUNCTION_ARN"),
 		maxMatches:           viper.GetInt32("MAX_MATCHES"),
@@ -64,7 +65,10 @@ func NewConfig(port string, serverHandler ServerHandler, matchHandler MatchHandl
 		panic(err)
 	}
 
-	cfg.loadAwsConfig(awsCfg)
+	err = cfg.loadAwsConfig(awsCfg)
+	if err != nil {
+		panic(err)
+	}
 	return cfg
 }
 
