@@ -360,7 +360,7 @@ async function submit() {
       },
     };
 
-    await api.deployBackend(deployInput);
+    await api.updateBackend(deployInput);
     showToast("Deployment started successfully!", "success");
     setTimeout(() => router.push("/deployments"), 1000);
   } catch (error) {
