@@ -182,7 +182,8 @@ func handler(
 	)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
+			StatusCode: http.StatusAccepted,
+			Body:       "Queued",
 		}, fmt.Errorf("failed to create match: %w", err)
 	}
 	matchResp := dtos.ActiveMatchResponseFromEntity(match)
@@ -209,7 +210,6 @@ func handler(
 	}, nil
 }
 
-// Matchmaking function using go-redis commands
 func findMatchingPlayers(
 	ctx context.Context,
 	ticket entities.MatchmakingTicket,
@@ -230,10 +230,8 @@ func findMatchingPlayers(
 			}
 			opponentIds = append(opponentIds, opTicket.UserId)
 		}
-	} else {
-		// Not enough players, add the user ticket to the pool
-		storageClient.PutMatchmakingTickets(ctx, ticket)
 	}
+	storageClient.PutMatchmakingTickets(ctx, ticket)
 
 	return opponentIds, nil
 }
