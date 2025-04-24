@@ -83,9 +83,12 @@ Resources:
             TableName:
               Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
 {{- end }}
-        - EcsRunTaskPolicy:
-            TaskDefinition:
-              Fn::ImportValue: !Sub "${StackName}-ServerDefinitionArn"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ecs:RunTask
+              Resource:
+                - !Sub "arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/${StackName}-${DeploymentStage}-server:*"
         - Statement:
             - Effect: Allow
               Action:
@@ -345,9 +348,12 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName:
               Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
-        - EcsRunTaskPolicy:
-            TaskDefinition:
-              Fn::ImportValue: !Sub "${StackName}-ServerDefinitionArn"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ecs:RunTask
+              Resource:
+                - !Sub "arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/${StackName}-${DeploymentStage}-server:*"
         - Statement:
             - Effect: Allow
               Action:

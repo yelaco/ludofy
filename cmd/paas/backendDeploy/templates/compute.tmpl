@@ -315,8 +315,3 @@ Outputs:
     Value: !GetAtt ServerService.Name
     Export:
       Name: !Sub "${StackName}-ServerServiceName"
-
-  ServerDefinitionArn:
-    Value: !Ref ServerDefinition
-    Export:
-      Name: !Sub "${StackName}-ServerDefinitionArn"
