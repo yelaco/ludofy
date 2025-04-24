@@ -72,6 +72,12 @@ Resources:
             - Name: APPSYNC_HTTP_URL
               Value:
                 Fn::ImportValue: !Sub "${StackName}-AppSyncGraphQLApiUrl"
+            - Name: ACTIVE_MATCHES_TABLE_NAME
+              Value:
+                Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
+            - Name: MATCH_STATES_TABLE_NAME
+              Value:
+                Fn::ImportValue: !Sub "${StackName}-MatchStatesTableName"
             - Name: ABORT_GAME_FUNCTION_ARN
               Value: !GetAtt AbortGameFunction.Arn
             - Name: END_GAME_FUNCTION_ARN
