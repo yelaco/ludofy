@@ -1,9 +1,12 @@
 package server
 
 import (
+	"context"
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/chess-vn/slchess/internal/aws/storage"
 	"github.com/chess-vn/slchess/pkg/logging"
 	"github.com/chess-vn/slchess/pkg/utils"
 	"github.com/gorilla/websocket"
@@ -104,7 +107,23 @@ func (m *DefaultMatch) playerJoin(playerId string, conn *websocket.Conn) {
 		logging.Fatal("invalid player id", zap.String("player_id", playerId))
 		return
 	}
-	m.handler.OnPlayerJoin(m, player)
+
+	init, err := m.handler.OnPlayerJoin(m, player)
+	if err != nil {
+		logging.Error("on player join", zap.Error(err))
+	}
+	if init {
+		err := storageClient.UpdateActiveMatch(
+			context.Background(),
+			m.GetId(),
+			storage.ActiveMatchUpdateOptions{
+				StartedAt: aws.Time(time.Now()),
+			},
+		)
+		if err != nil {
+			logging.Error("failed to update match", zap.Error(err))
+		}
+	}
 
 	player.setConn(conn)
 	m.handler.OnPlayerSync(m, player)
