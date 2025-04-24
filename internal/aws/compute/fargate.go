@@ -11,6 +11,8 @@ import (
 	"github.com/chess-vn/slchess/pkg/logging"
 )
 
+var ErrNoServerAvailable = fmt.Errorf("no server available")
+
 type TaskMetadata struct {
 	TaskArn     string `json:"TaskARN"`
 	ClusterName string `json:"Cluster"`
@@ -108,7 +110,7 @@ func (client *Client) CheckAndGetNewServerIp(
 		return describeTasksOutput.Tasks[i].StartedAt.Before(*describeTasksOutput.Tasks[j].StartedAt)
 	})
 
-	var newServerIp string
+	var newServerIp *string
 	for i, task := range describeTasksOutput.Tasks {
 		for _, attachment := range task.Attachments {
 			for _, detail := range attachment.Details {
@@ -131,7 +133,7 @@ func (client *Client) CheckAndGetNewServerIp(
 								return targetPublicIp, nil
 							}
 							if i == 0 {
-								newServerIp = *eni.Association.PublicIp
+								newServerIp = eni.Association.PublicIp
 							}
 						}
 					}
@@ -139,8 +141,11 @@ func (client *Client) CheckAndGetNewServerIp(
 			}
 		}
 	}
+	if newServerIp == nil {
+		return "", ErrNoServerAvailable
+	}
 
-	return newServerIp, nil
+	return *newServerIp, nil
 }
 
 func (client *Client) CheckAndStartTask(
