@@ -33,7 +33,7 @@ func (client *Client) TransactCreateMatch(ctx context.Context, match entities.Ac
 	transactItems := make([]types.TransactWriteItem, 0, len(match.Players)*2+1)
 	for _, player := range match.Players {
 		transactItems = append(transactItems, types.TransactWriteItem{
-			ConditionCheck: &types.ConditionCheck{
+			Delete: &types.Delete{
 				TableName: client.cfg.MatchmakingTicketsTableName,
 				Key: map[string]types.AttributeValue{
 					"UserId": &types.AttributeValueMemberS{Value: player.Id},
@@ -52,16 +52,6 @@ func (client *Client) TransactCreateMatch(ctx context.Context, match entities.Ac
 			Item:      av,
 		},
 	})
-	for _, player := range match.Players {
-		transactItems = append(transactItems, types.TransactWriteItem{
-			Delete: &types.Delete{
-				TableName: client.cfg.MatchmakingTicketsTableName,
-				Key: map[string]types.AttributeValue{
-					"UserId": &types.AttributeValueMemberS{Value: player.Id},
-				},
-			},
-		})
-	}
 	for _, player := range match.Players {
 		userMatch := entities.UserMatch{
 			UserId:  player.Id,

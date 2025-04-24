@@ -283,7 +283,6 @@ func createMatch(
 }
 
 func notifyQueueingUser(ctx context.Context, userId string, data []byte) error {
-	// Get user ID from DynamoDB
 	connection, err := storageClient.GetConnectionByUserId(ctx, userId)
 	if err != nil {
 		if errors.Is(err, storage.ErrConnectionNotFound) {
