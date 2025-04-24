@@ -65,7 +65,7 @@ Resources:
             - Name: MAX_MATCHES
               Value: {{ .ServerConfiguration.MaxMatches }}
             - Name: SERVER_PROTECTION_TIMEOUT
-              Value: "60m"
+              Value: "10m"
             - Name: COGNITO_USER_POOL_ID
               Value:
                 Fn::ImportValue: !Sub "${StackName}-UserPoolId"

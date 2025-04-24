@@ -30,6 +30,7 @@ type Config struct {
 	protectionTimeout    time.Duration
 
 	awsCfg            aws.Config
+	appsyncCfg        aws.Config
 	cognitoPublicKeys map[string]*rsa.PublicKey
 }
 
@@ -51,13 +52,13 @@ func NewConfig(port string, serverHandler ServerHandler, matchHandler MatchHandl
 		maxMatches:           viper.GetInt32("MAX_MATCHES"),
 		protectionTimeout:    protectionTimeout,
 	}
-	awsCfg, err := config.LoadDefaultConfig(context.TODO())
+	cfg.awsCfg, err = config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		panic(err)
 	}
 	tokenSigningKeyUrl := fmt.Sprintf(
 		"https://cognito-idp.%s.amazonaws.com/%s/.well-known/jwks.json",
-		awsCfg.Region,
+		cfg.awsCfg.Region,
 		cfg.cognitoUserPoolId,
 	)
 	cfg.cognitoPublicKeys, err = awsAuth.LoadCognitoPublicKeys(tokenSigningKeyUrl)
@@ -65,21 +66,21 @@ func NewConfig(port string, serverHandler ServerHandler, matchHandler MatchHandl
 		panic(err)
 	}
 
-	err = cfg.loadAwsConfig(awsCfg)
+	err = cfg.loadAwsConfig()
 	if err != nil {
 		panic(err)
 	}
 	return cfg
 }
 
-func (c *Config) loadAwsConfig(cfg aws.Config) error {
+func (c *Config) loadAwsConfig() error {
 	ctx := context.Background()
 
 	assumedCfg, err := config.LoadDefaultConfig(
 		ctx,
 		config.WithCredentialsProvider(
 			stscreds.NewAssumeRoleProvider(
-				sts.NewFromConfig(cfg),
+				sts.NewFromConfig(c.awsCfg),
 				c.appSyncAccessRoleArn,
 			),
 		),
@@ -87,6 +88,6 @@ func (c *Config) loadAwsConfig(cfg aws.Config) error {
 	if err != nil {
 		return fmt.Errorf("unable to assume config: %w", err)
 	}
-	c.awsCfg = assumedCfg
+	c.appsyncCfg = assumedCfg
 	return nil
 }

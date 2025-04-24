@@ -215,7 +215,7 @@ func (s *DefaultServer) HandleMatchSave(match Match) {
 
 	// Sign the request
 	signer := v4.NewSigner()
-	credentials, err := s.cfg.awsCfg.Credentials.Retrieve(ctx)
+	credentials, err := s.cfg.appsyncCfg.Credentials.Retrieve(ctx)
 	if err != nil {
 		logging.Error("Failed to save game", zap.Error(err))
 		return
