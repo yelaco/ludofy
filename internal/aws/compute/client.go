@@ -1,15 +1,20 @@
 package compute
 
 import (
+	"net/http"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 )
 
 type Client struct {
-	ecs *ecs.Client
-	ec2 *ec2.Client
-	cfg config
+	ecs        *ecs.Client
+	ec2        *ec2.Client
+	cloudwatch *cloudwatch.Client
+	http       *http.Client
+	cfg        config
 }
 
 type config struct {
@@ -17,11 +22,13 @@ type config struct {
 	TaskArn     *string
 }
 
-func NewClient(ecsClient *ecs.Client, ec2Client *ec2.Client) *Client {
+func NewClient(ecsClient *ecs.Client, ec2Client *ec2.Client, cloudwatchClient *cloudwatch.Client) *Client {
 	return &Client{
-		ecs: ecsClient,
-		ec2: ec2Client,
-		cfg: loadConfig(),
+		ecs:        ecsClient,
+		ec2:        ec2Client,
+		cloudwatch: cloudwatchClient,
+		http:       new(http.Client),
+		cfg:        loadConfig(),
 	}
 }
 

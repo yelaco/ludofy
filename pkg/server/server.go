@@ -48,6 +48,7 @@ func NewFromConfig(cfg Config) Server {
 	computeClient = compute.NewClient(
 		ecs.NewFromConfig(cfg.awsCfg),
 		nil,
+		nil,
 	)
 	lambdaClient = lambda.NewFromConfig(cfg.awsCfg)
 

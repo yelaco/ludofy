@@ -172,3 +172,7 @@ Outputs:
     Description: "Endpoint URL for respond to a friendship request"
     Value: !Sub "POST ${HttpApiStack.Outputs.HttpApiEndpoint}/friend/{id}/respond"
 {{- end }}
+
+  MetricsGetEndpointUrl:
+    Description: "Endpoint URL for getting backend metrics"
+    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/metrics"

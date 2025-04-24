@@ -2,12 +2,15 @@ package compute
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"sort"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/chess-vn/slchess/internal/domains/dtos"
 	"github.com/chess-vn/slchess/pkg/logging"
 )
 
@@ -148,6 +151,62 @@ func (client *Client) CheckAndGetNewServerIp(
 	return *newServerIp, nil
 }
 
+func (client *Client) GetServerIps(
+	ctx context.Context,
+	clusterName,
+	serviceName string,
+) ([]string, error) {
+	// List tasks in the cluster
+	listTasksOutput, err := client.ecs.ListTasks(ctx, &ecs.ListTasksInput{
+		Cluster:       &clusterName,
+		ServiceName:   &serviceName,
+		DesiredStatus: "RUNNING",
+	})
+	if err != nil || len(listTasksOutput.TaskArns) == 0 {
+		return nil, fmt.Errorf("no running tasks found or error occurred: %v", err)
+	}
+
+	describeTasksOutput, err := client.ecs.DescribeTasks(
+		ctx,
+		&ecs.DescribeTasksInput{
+			Cluster: aws.String(clusterName),
+			Tasks:   listTasksOutput.TaskArns,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to describe ECS tasks: %w", err)
+	}
+
+	serverIps := make([]string, len(listTasksOutput.TaskArns))
+	for _, task := range describeTasksOutput.Tasks {
+		for _, attachment := range task.Attachments {
+			for _, detail := range attachment.Details {
+				if *detail.Name == "networkInterfaceId" {
+					eniID := *detail.Value
+
+					eniOutput, err := client.ec2.DescribeNetworkInterfaces(
+						ctx,
+						&ec2.DescribeNetworkInterfacesInput{
+							NetworkInterfaceIds: []string{eniID},
+						},
+					)
+					if err != nil {
+						return nil, fmt.Errorf("failed to describe ENI: %w", err)
+					}
+
+					for _, eni := range eniOutput.NetworkInterfaces {
+						if eni.Association != nil && eni.Association.PublicIp != nil {
+							serverIps = append(serverIps, *eni.Association.PublicIp)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return serverIps, nil
+}
+
 func (client *Client) CheckAndStartTask(
 	ctx context.Context,
 	clusterName,
@@ -196,4 +255,29 @@ func (client *Client) UpdateServerProtection(
 		return fmt.Errorf("failed to update task protection: %w", err)
 	}
 	return nil
+}
+
+func (client *Client) GetServerStatus(ip string, port int) (dtos.ServerStatusResponse, error) {
+	req, err := http.NewRequest(
+		http.MethodGet,
+		fmt.Sprintf("http://%s:%d/status", ip, port),
+		nil,
+	)
+	if err != nil {
+		return dtos.ServerStatusResponse{}, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := client.http.Do(req)
+	if err != nil {
+		return dtos.ServerStatusResponse{}, fmt.Errorf("failed to send request: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return dtos.ServerStatusResponse{}, fmt.Errorf("unknown status code: %d", resp.StatusCode)
+	}
+	var status dtos.ServerStatusResponse
+	err = json.NewDecoder(resp.Body).Decode(&status)
+	if err != nil {
+		return dtos.ServerStatusResponse{}, fmt.Errorf("failed to decode body: %w", err)
+	}
+	return status, nil
 }
