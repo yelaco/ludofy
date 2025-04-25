@@ -1,8 +1,8 @@
 type MatchState {
   Id: ID!
   MatchId: ID!
-  Players: AWSJSON!
-  Game: AWSJSON!
+  PlayerStates: AWSJSON!
+  GameState: AWSJSON!
   Move: AWSJSON!
   Timestamp: AWSDateTime!
 }
