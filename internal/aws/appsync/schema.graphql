@@ -24,7 +24,6 @@ input UpdateMatchStateInput {
   playerStates: AWSJSON! # array of player states in JSON format
   gameState: AWSJSON! # any JSON-structured game state
   move: AWSJSON! # any JSON-structured move
-  ply: Int!
   timestamp: AWSDateTime! # use AWSDateTime for ISO format strings
 }
 

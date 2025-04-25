@@ -73,7 +73,6 @@ Resources:
             "GameState": $util.dynamodb.toDynamoDBJson($context.arguments.input.gameState),
             "PlayerStates": $util.dynamodb.toDynamoDBJson($context.arguments.input.playerStates),
             "Move": $util.dynamodb.toDynamoDBJson($context.arguments.input.move),
-            "Ply": { "N" : "$context.arguments.input.ply" },
             "Timestamp": { "S": "$context.arguments.input.timestamp" }
           }
         }

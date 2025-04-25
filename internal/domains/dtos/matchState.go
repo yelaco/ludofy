@@ -13,8 +13,8 @@ var updateMatchStateMutation string
 type MatchStateRequest struct {
 	Id           string               `json:"id"`
 	MatchId      string               `json:"matchId"`
-	PlayerStates []PlayerStateRequest `json:"players"`
-	GameState    interface{}          `json:"game"`
+	PlayerStates []PlayerStateRequest `json:"playerStates"`
+	GameState    interface{}          `json:"gameState"`
 	Move         MoveRequest          `json:"move"`
 	Timestamp    time.Time            `json:"timestamp"`
 }
