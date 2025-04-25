@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -11,7 +12,16 @@ import (
 	"github.com/chess-vn/slchess/internal/aws/storage"
 	"github.com/chess-vn/slchess/internal/domains/dtos"
 	"github.com/chess-vn/slchess/internal/domains/entities"
+	"github.com/chess-vn/slchess/pkg/server"
 )
+
+type MatchRecordRequest struct {
+	MatchId   string                `json:"matchId"`
+	Players   []server.PlayerRecord `json:"players"`
+	StartedAt time.Time             `json:"startedAt"`
+	EndedAt   time.Time             `json:"endedAt"`
+	Result    interface{}           `json:"results"`
+}
 
 var storageClient *storage.Client
 

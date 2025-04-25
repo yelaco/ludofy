@@ -121,9 +121,10 @@ func (h *MyServerHandler) OnHandleMatchEnd(
 	match := matchHandler.GetMatch().(*Match)
 	record.Players = make([]dtos.PlayerRecordRequest, 0, len(match.GetPlayers()))
 	for _, player := range match.GetPlayers() {
-		record.Players = append(record.Players, PlayerRecord{
-			Id: player.GetId(),
-		})
+		playerRecord := server.PlayerRecord{
+			"Id": player.GetId(),
+		}
+		record.Players = append(record.Players, playerRecord)
 	}
 	record.StartedAt = match.StartedAt
 	record.EndedAt = time.Now()
