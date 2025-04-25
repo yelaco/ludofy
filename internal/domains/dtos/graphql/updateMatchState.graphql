@@ -1,10 +1,10 @@
 mutation UpdateMatchState($input: UpdateMatchStateInput!) {
   updateMatchState(input: $input) {
-    id
-    matchId
-    playerStates # AWSJSON — will return as a list of objects
-    gameState # AWSJSON — any custom game-specific format
-    move # AWSJSON — any move object
-    timestamp
+    Id
+    MatchId
+    PlayerStates
+    GameState
+    Move
+    Timestamp
   }
 }

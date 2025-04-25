@@ -1,10 +1,10 @@
 type MatchState {
-  id: ID!
-  matchId: ID!
-  players: AWSJSON!
-  game: AWSJSON!
-  move: AWSJSON!
-  timestamp: AWSDateTime!
+  Id: ID!
+  MatchId: ID!
+  Players: AWSJSON!
+  Game: AWSJSON!
+  Move: AWSJSON!
+  Timestamp: AWSDateTime!
 }
 
 type Message @aws_cognito_user_pools @aws_iam {
@@ -18,10 +18,10 @@ type Message @aws_cognito_user_pools @aws_iam {
 input UpdateMatchStateInput {
   id: ID!
   matchId: ID!
-  playerStates: AWSJSON! # array of player states in JSON format
-  gameState: AWSJSON! # any JSON-structured game state
-  move: AWSJSON! # any JSON-structured move
-  timestamp: AWSDateTime! # use AWSDateTime for ISO format strings
+  playerStates: AWSJSON!
+  gameState: AWSJSON!
+  move: AWSJSON!
+  timestamp: AWSDateTime!
 }
 
 input SendMessageInput {
