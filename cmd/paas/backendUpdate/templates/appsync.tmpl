@@ -70,7 +70,7 @@ Resources:
           },
           "attributeValues": {
             "MatchId": { "S": "$context.arguments.input.matchId" },
-            "GameState": #if($ctx.args.input.gameState) $util.dynamodb.toDynamoDBJson($ctx.args.input.gameState) #else { "NULL": true } #end,
+            "GameState": #if($ctx.args.input.gameState) $util.dynamodb.toDynamoDBJson($ctx.args.input.gameState) #else { "NULL": null } #end,
             "PlayerStates": $util.dynamodb.toDynamoDBJson($context.arguments.input.playerStates),
             "Move": $util.dynamodb.toDynamoDBJson($context.arguments.input.move),
             "Timestamp": { "S": "$context.arguments.input.timestamp" }
