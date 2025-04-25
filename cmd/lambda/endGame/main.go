@@ -21,6 +21,7 @@ func init() {
 }
 
 func handler(ctx context.Context, event json.RawMessage) error {
+	fmt.Println(string(event))
 	var matchRecordReq server.MatchRecordRequest
 	if err := json.Unmarshal(event, &matchRecordReq); err != nil {
 		return fmt.Errorf("failed to unmarshal: %w", err)
