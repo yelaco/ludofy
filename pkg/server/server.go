@@ -241,7 +241,9 @@ func (s *DefaultServer) HandleMatchSave(match Match) {
 		logging.Error("Failed to save game", zap.Error(err))
 		return
 	}
-	fmt.Println(response.Body)
+
+	resp, _ := io.ReadAll(response.Body)
+	fmt.Println(string(resp))
 
 	if response.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(response.Body)
