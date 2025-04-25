@@ -1,21 +1,13 @@
-type PlayerState @aws_cognito_user_pools @aws_iam {
-  Clock: String! @aws_cognito_user_pools @aws_iam
-  Status: String! @aws_cognito_user_pools @aws_iam
-}
+scalar AWSJSON
+scalar AWSDateTime
 
-type Move @aws_cognito_user_pools @aws_iam {
-  PlayerId: ID! @aws_cognito_user_pools @aws_iam
-  Uci: String! @aws_cognito_user_pools @aws_iam
-}
-
-type MatchState @aws_cognito_user_pools @aws_iam {
-  Id: ID! @aws_cognito_user_pools @aws_iam
-  MatchId: ID! @aws_cognito_user_pools @aws_iam
-  PlayerStates: [PlayerState!]! @aws_cognito_user_pools @aws_iam
-  GameState: String! @aws_cognito_user_pools @aws_iam
-  Move: Move! @aws_cognito_user_pools @aws_iam
-  Ply: Int! @aws_cognito_user_pools @aws_iam
-  Timestamp: AWSDateTime! @aws_cognito_user_pools @aws_iam
+type MatchStateRequest {
+  id: ID!
+  matchId: ID!
+  players: AWSJSON!
+  game: AWSJSON!
+  move: AWSJSON!
+  timestamp: AWSDateTime!
 }
 
 type Message @aws_cognito_user_pools @aws_iam {
@@ -26,24 +18,14 @@ type Message @aws_cognito_user_pools @aws_iam {
   CreatedAt: AWSDateTime! @aws_cognito_user_pools @aws_iam
 }
 
-input PlayerStateInput {
-  clock: String!
-  status: String!
-}
-
-input MoveInput {
-  playerId: ID!
-  uci: String!
-}
-
 input UpdateMatchStateInput {
   id: ID!
   matchId: ID!
-  playerStates: [PlayerStateInput!]!
-  gameState: String!
-  move: MoveInput!
+  playerStates: AWSJSON! # array of player states in JSON format
+  gameState: AWSJSON! # any JSON-structured game state
+  move: AWSJSON! # any JSON-structured move
   ply: Int!
-  timestamp: String!
+  timestamp: AWSDateTime! # use AWSDateTime for ISO format strings
 }
 
 input SendMessageInput {

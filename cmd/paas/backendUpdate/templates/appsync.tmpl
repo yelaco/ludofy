@@ -70,22 +70,9 @@ Resources:
           },
           "attributeValues": {
             "MatchId": { "S": "$context.arguments.input.matchId" },
-            "GameState": { "S": "$context.arguments.input.gameState" },
-            "PlayerStates": { "L": [
-              #foreach($playerState in $context.arguments.input.playerStates)
-                {
-                  "M": {
-                    "Clock": { "S": "$playerState.clock" },
-                    "Status": { "S": "$playerState.status" }
-                  }
-                }
-                #if($foreach.hasNext),#end
-              #end
-            ] },
-            "Move": { "M": {
-              "PlayerId": { "S": "$context.arguments.input.move.playerId" },
-              "Uci": { "S": "$context.arguments.input.move.uci" },
-            } },
+            "GameState": $util.dynamodb.toDynamoDBJson($context.arguments.input.gameState),
+            "PlayerStates": $util.dynamodb.toDynamoDBJson($context.arguments.input.playerStates),
+            "Move": $util.dynamodb.toDynamoDBJson($context.arguments.input.move),
             "Ply": { "N" : "$context.arguments.input.ply" },
             "Timestamp": { "S": "$context.arguments.input.timestamp" }
           }
