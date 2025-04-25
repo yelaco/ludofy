@@ -325,7 +325,7 @@ func (s *DefaultServer) loadMatch(matchId string) (Match, error) {
 
 	value, loaded := s.matches.Load(matchId)
 	if loaded {
-		match, ok := value.(*DefaultMatch)
+		match, ok := value.(Match)
 		if ok {
 			logging.Info("match loaded")
 			return match, nil
