@@ -68,6 +68,7 @@ func NewMatchStateAppSyncRequest(req MatchStateRequest) MatchStateAppSyncRequest
 		"id":           req.Id,
 		"matchId":      req.MatchId,
 		"playerStates": string(playerStatesJson),
+		"gameState":    nil,
 		"move":         string(moveJson),
 		"timestamp":    req.Timestamp,
 	}
