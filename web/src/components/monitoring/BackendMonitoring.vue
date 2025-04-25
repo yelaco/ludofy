@@ -105,7 +105,7 @@ async function fetchMetrics() {
 
     const res = await fetch(url.toString(), {
       headers: {
-        Authorization: `Bearer ${user.id_token}`,
+        Authorization: `${user.id_token}`,
       },
     });
 
@@ -154,6 +154,16 @@ function updateTimeRange({ start, end, autoRefresh: auto }) {
     }, 30000);
   }
 }
+
+onMounted(async () => {
+  const now = new Date();
+  const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+
+  startTime.value = threeHoursAgo.toISOString();
+  endTime.value = now.toISOString();
+
+  await fetchMetrics();
+});
 
 onUnmounted(() => {
   if (refreshInterval) clearInterval(refreshInterval);

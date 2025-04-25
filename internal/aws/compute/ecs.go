@@ -38,9 +38,6 @@ func (client *Client) GetServiceMetrics(
 		if err != nil {
 			return nil, fmt.Errorf("failed to get %s: %w", metricName, err)
 		}
-		if len(resp.Datapoints) == 0 {
-			return nil, fmt.Errorf("no datapoints for %s", metricName)
-		}
 		return resp.Datapoints, nil
 	}
 
