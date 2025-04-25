@@ -62,20 +62,25 @@ type NextMatchStatePageToken struct {
 
 func NewMatchStateAppSyncRequest(req MatchStateRequest) MatchStateAppSyncRequest {
 	playerStatesJson, _ := json.Marshal(req.PlayerStates)
-	gameStateJson, _ := json.Marshal(req.GameState)
 	moveJson, _ := json.Marshal(req.Move)
+
+	input := map[string]interface{}{
+		"id":           req.Id,
+		"matchId":      req.MatchId,
+		"playerStates": string(playerStatesJson),
+		"move":         string(moveJson),
+		"timestamp":    req.Timestamp,
+	}
+
+	if req.GameState != nil {
+		gameStateJson, _ := json.Marshal(req.GameState)
+		input["gameState"] = string(gameStateJson)
+	}
 
 	return MatchStateAppSyncRequest{
 		Query: updateMatchStateMutation,
 		Variables: map[string]interface{}{
-			"input": map[string]interface{}{
-				"id":           req.Id,
-				"matchId":      req.MatchId,
-				"playerStates": string(playerStatesJson),
-				"gameState":    string(gameStateJson),
-				"move":         string(moveJson),
-				"timestamp":    req.Timestamp,
-			},
+			"input": input,
 		},
 	}
 }
