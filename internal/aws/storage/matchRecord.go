@@ -33,10 +33,23 @@ func (client *Client) GetMatchRecord(
 	if output.Item == nil {
 		return entities.MatchRecord{}, ErrMatchRecordNotFound
 	}
+	players := output.Item["Players"].(*types.AttributeValueMemberL).Value
+	playerRecords := []entities.PlayerRecord{}
+	if err := attributevalue.UnmarshalList(players, &players); err != nil {
+		return entities.MatchRecord{}, err
+	}
+	output.Item["Players"] = nil
+
 	var matchRecord entities.MatchRecord
 	if err := attributevalue.UnmarshalMap(output.Item, &matchRecord); err != nil {
 		return entities.MatchRecord{}, err
 	}
+
+	matchRecord.Players = make([]entities.PlayerRecordInterface, 0, len(playerRecords))
+	for _, record := range playerRecords {
+		matchRecord.Players = append(matchRecord.Players, record)
+	}
+
 	return matchRecord, nil
 }
 

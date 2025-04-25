@@ -17,7 +17,7 @@ type MatchRecordRequest struct {
 func MatchRecordRequestToEntity(req MatchRecordRequest) entities.MatchRecord {
 	matchRecord := entities.MatchRecord{
 		MatchId:   req.MatchId,
-		Players:   make([]entities.PlayerRecord, 0, len(req.Players)),
+		Players:   make([]entities.PlayerRecordInterface, 0, len(req.Players)),
 		StartedAt: req.StartedAt,
 		EndedAt:   req.EndedAt,
 		Result:    req.Result,
