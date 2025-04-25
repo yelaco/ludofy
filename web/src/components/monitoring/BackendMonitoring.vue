@@ -24,10 +24,11 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from "vue";
+import { userManager } from "@/auth"; // Assuming you already have this
 import LineChart from "./LineChart.vue";
 
 const props = defineProps({
-  backendId: String,
+  metricsEndpointUrl: String,
 });
 
 const metrics = ref({
@@ -57,20 +58,78 @@ const usageChartData = computed(() => ({
   ],
 }));
 
+function getTimeRange(minutesAgo = 30) {
+  const end = new Date();
+  const start = new Date(end.getTime() - minutesAgo * 60 * 1000);
+  return {
+    start: start.toISOString(),
+    end: end.toISOString(),
+  };
+}
+
 let interval;
 
-function fetchMetrics() {
-  fetch(`/mock/monitoring/backend.json`)
+async function fetchMetrics() {
+  if (!props.metricsEndpointUrl) {
+    console.warn("No metricsEndpointUrl provided");
+    return;
+  }
+
+  const user = await userManager.getUser();
+  if (!user || !user.id_token) {
+    console.error("User not authenticated or token missing");
+    return;
+  }
+
+  const { start, end } = getTimeRange(30);
+  interval = 300;
+
+  const url = new URL(props.metricsEndpointUrl);
+  url.searchParams.set("start", start);
+  url.searchParams.set("end", end);
+  url.searchParams.set("interval", interval);
+
+  fetch(url.toString(), {
+    headers: {
+      Authorization: `${user.id_token}`,
+      Accept: "*/*",
+    },
+  })
     .then((res) => res.json())
     .then((data) => {
-      metrics.value = data;
+      const usageHistory = data.serviceMetricsList
+        .slice()
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+        .map((d) => ({
+          timestamp: new Date(d.timestamp).toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }),
+          cpu: d.cpuAvg * 100,
+          memory: d.memAvg * 1024,
+        }));
+
+      const avgCpu =
+        usageHistory.reduce((acc, d) => acc + d.cpu, 0) / usageHistory.length;
+      const avgMemory =
+        usageHistory.reduce((acc, d) => acc + d.memory, 0) /
+        usageHistory.length;
+
+      metrics.value = {
+        usageHistory,
+        avgCpu: avgCpu.toFixed(2),
+        avgMemory: avgMemory.toFixed(2),
+        activeMatches: data.serverMetricsList?.[0]?.activeMatches ?? 0,
+      };
     })
-    .catch(console.error);
+    .catch((err) => {
+      console.error("Failed to fetch metrics:", err);
+    });
 }
 
 onMounted(() => {
   fetchMetrics();
-  interval = setInterval(fetchMetrics, 30000);
 });
 
 onUnmounted(() => {

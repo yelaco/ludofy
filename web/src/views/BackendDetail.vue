@@ -44,7 +44,7 @@
       </div>
 
       <!-- Monitoring Dashboard -->
-      <BackendMonitoring :backend-id="backend.id" />
+      <BackendMonitoring :metricsEndpointUrl="metricsEndpointUrl" />
 
       <!-- Outputs Section -->
       <div class="bg-white p-6 rounded shadow">
@@ -176,6 +176,8 @@ const confirmationInput = ref("");
 
 const toastMessage = ref("");
 
+const metricsEndpointUrl = ref("");
+
 function showToast(message, duration = 3000) {
   toastMessage.value = message;
   setTimeout(() => {
@@ -239,6 +241,14 @@ onMounted(async () => {
   try {
     const response = await api.getBackend(id);
     backend.value = response.data;
+
+    // Automatically extract MetricsGetEndpointUrl from outputs
+    if (backend.value?.outputs?.MetricsGetEndpointUrl) {
+      // Remove method prefix if it exists (e.g., "GET https://...")
+      const raw = backend.value.outputs.MetricsGetEndpointUrl;
+      const parsed = parseMethodAndUrl(raw);
+      metricsEndpointUrl.value = parsed.url || raw;
+    }
   } catch (err) {
     console.error("Failed to fetch backend", err);
     error.value = "Failed to load backend details.";

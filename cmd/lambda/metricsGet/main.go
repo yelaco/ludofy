@@ -17,7 +17,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
-	"github.com/chess-vn/slchess/internal/aws/auth"
 	"github.com/chess-vn/slchess/internal/aws/compute"
 	"github.com/chess-vn/slchess/internal/aws/storage"
 	"github.com/chess-vn/slchess/internal/domains/dtos"
@@ -48,7 +47,6 @@ func handler(
 	events.APIGatewayProxyResponse,
 	error,
 ) {
-	auth.MustAuth(event.RequestContext.Authorizer)
 	startTime, endTime, interval, err := extractParameters(event.QueryStringParameters)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
