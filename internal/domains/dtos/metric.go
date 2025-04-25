@@ -8,13 +8,13 @@ type ServiceMetrics struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-type ServerStatusResponse struct {
+type ServerMetricsResponse struct {
 	ActiveMatches int32 `json:"activeMatches"`
 	CanAccept     bool  `json:"canAccept"`
 	MaxMatches    int32 `json:"maxMatches"`
 }
 
 type BackendMetricsResponse struct {
-	ServiceMetrics ServiceMetrics         `json:"serviceMetrics"`
-	ServerStatuses []ServerStatusResponse `json:"serverStatuses"`
+	ServiceMetrics    []ServiceMetrics        `json:"serviceMetricsList"`
+	ServerMetricsList []ServerMetricsResponse `json:"serverMetricsList"`
 }

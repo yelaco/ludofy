@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -47,6 +49,12 @@ func handler(
 	error,
 ) {
 	auth.MustAuth(event.RequestContext.Authorizer)
+	startTime, endTime, interval, err := extractParameters(event.QueryStringParameters)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+		}, fmt.Errorf("failed to extract parameters: %w", err)
+	}
 
 	serverIps, err := computeClient.GetServerIps(ctx, clusterName, serviceName)
 	if err != nil {
@@ -57,7 +65,7 @@ func handler(
 		}
 	}
 
-	serverStatuses := make([]dtos.ServerStatusResponse, 0, len(serverIps))
+	serverMetricsList := make([]dtos.ServerMetricsResponse, 0, len(serverIps))
 	for _, serverIp := range serverIps {
 		status, err := computeClient.GetServerStatus(serverIp, 7202)
 		if err != nil {
@@ -65,10 +73,17 @@ func handler(
 				StatusCode: http.StatusInternalServerError,
 			}, fmt.Errorf("failed to get server statuses: %w", err)
 		}
-		serverStatuses = append(serverStatuses, status)
+		serverMetricsList = append(serverMetricsList, status)
 	}
 
-	serviceMetrics, err := computeClient.GetServiceMetrics(ctx, clusterName, serviceName)
+	serviceMetricsList, err := computeClient.GetServiceMetrics(
+		ctx,
+		startTime,
+		endTime,
+		interval,
+		clusterName,
+		serviceName,
+	)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
@@ -76,8 +91,8 @@ func handler(
 	}
 
 	resp := dtos.BackendMetricsResponse{
-		ServiceMetrics: serviceMetrics,
-		ServerStatuses: serverStatuses,
+		ServiceMetrics:    serviceMetricsList,
+		ServerMetricsList: serverMetricsList,
 	}
 
 	respJson, err := json.Marshal(resp)
@@ -90,6 +105,45 @@ func handler(
 		StatusCode: http.StatusOK,
 		Body:       string(respJson),
 	}, nil
+}
+
+func extractParameters(
+	params map[string]string,
+) (
+	time.Time,
+	time.Time,
+	int32,
+	error,
+) {
+	startStr, ok := params["start"]
+	if !ok {
+		return time.Time{}, time.Time{}, 0, fmt.Errorf("missing start time")
+	}
+	startTime, err := time.Parse(time.RFC3339, startStr)
+	if err != nil {
+		return time.Time{}, time.Time{}, 0, fmt.Errorf("failed to parse start time: %w", err)
+	}
+
+	endStr, ok := params["end"]
+	if !ok {
+		return time.Time{}, time.Time{}, 0, fmt.Errorf("missing start time")
+	}
+	endTime, err := time.Parse(time.RFC3339, endStr)
+	if err != nil {
+		return time.Time{}, time.Time{}, 0, fmt.Errorf("failed to parse end time: %w", err)
+	}
+
+	intervalStr, ok := params["interval"]
+	if !ok {
+		return time.Time{}, time.Time{}, 0, fmt.Errorf("missing interval")
+	}
+	intervalInt64, err := strconv.ParseInt(intervalStr, 10, 32)
+	if err != nil {
+		return time.Time{}, time.Time{}, 0, fmt.Errorf("invalid limit: %v", err)
+	}
+	interval := int32(intervalInt64)
+
+	return startTime, endTime, interval, nil
 }
 
 func main() {

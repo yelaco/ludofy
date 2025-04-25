@@ -257,27 +257,27 @@ func (client *Client) UpdateServerProtection(
 	return nil
 }
 
-func (client *Client) GetServerStatus(ip string, port int) (dtos.ServerStatusResponse, error) {
+func (client *Client) GetServerStatus(ip string, port int) (dtos.ServerMetricsResponse, error) {
 	req, err := http.NewRequest(
 		http.MethodGet,
 		fmt.Sprintf("http://%s:%d/status", ip, port),
 		nil,
 	)
 	if err != nil {
-		return dtos.ServerStatusResponse{}, fmt.Errorf("failed to create request: %w", err)
+		return dtos.ServerMetricsResponse{}, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	resp, err := client.http.Do(req)
 	if err != nil {
-		return dtos.ServerStatusResponse{}, fmt.Errorf("failed to send request: %w", err)
+		return dtos.ServerMetricsResponse{}, fmt.Errorf("failed to send request: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return dtos.ServerStatusResponse{}, fmt.Errorf("unknown status code: %d", resp.StatusCode)
+		return dtos.ServerMetricsResponse{}, fmt.Errorf("unknown status code: %d", resp.StatusCode)
 	}
-	var status dtos.ServerStatusResponse
+	var status dtos.ServerMetricsResponse
 	err = json.NewDecoder(resp.Body).Decode(&status)
 	if err != nil {
-		return dtos.ServerStatusResponse{}, fmt.Errorf("failed to decode body: %w", err)
+		return dtos.ServerMetricsResponse{}, fmt.Errorf("failed to decode body: %w", err)
 	}
 	return status, nil
 }

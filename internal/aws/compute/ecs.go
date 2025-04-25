@@ -11,8 +11,18 @@ import (
 	"github.com/chess-vn/slchess/internal/domains/dtos"
 )
 
-func (client *Client) GetServiceMetrics(ctx context.Context, clusterName, serviceName string) (dtos.ServiceMetrics, error) {
-	getMetric := func(metricName string) (float64, time.Time, error) {
+func (client *Client) GetServiceMetrics(
+	ctx context.Context,
+	startTime,
+	endTime time.Time,
+	interval int32,
+	clusterName,
+	serviceName string,
+) (
+	[]dtos.ServiceMetrics,
+	error,
+) {
+	getMetric := func(metricName string) ([]types.Datapoint, error) {
 		resp, err := client.cloudwatch.GetMetricStatistics(ctx, &cloudwatch.GetMetricStatisticsInput{
 			Namespace:  aws.String("AWS/ECS"),
 			MetricName: aws.String(metricName),
@@ -20,38 +30,38 @@ func (client *Client) GetServiceMetrics(ctx context.Context, clusterName, servic
 				{Name: aws.String("ClusterName"), Value: aws.String(clusterName)},
 				{Name: aws.String("ServiceName"), Value: aws.String(serviceName)},
 			},
-			Period:     aws.Int32(60),
-			StartTime:  aws.Time(time.Now().Add(-5 * time.Minute)),
-			EndTime:    aws.Time(time.Now()),
+			Period:     aws.Int32(interval),
+			StartTime:  aws.Time(startTime),
+			EndTime:    aws.Time(endTime),
 			Statistics: []types.Statistic{types.StatisticAverage},
 		})
 		if err != nil {
-			return 0, time.Time{}, fmt.Errorf("failed to get %s: %w", metricName, err)
+			return nil, fmt.Errorf("failed to get %s: %w", metricName, err)
 		}
 		if len(resp.Datapoints) == 0 {
-			return 0, time.Time{}, fmt.Errorf("no datapoints for %s", metricName)
+			return nil, fmt.Errorf("no datapoints for %s", metricName)
 		}
-		latest := resp.Datapoints[0]
-		for _, dp := range resp.Datapoints {
-			if dp.Timestamp.After(aws.ToTime(latest.Timestamp)) {
-				latest = dp
-			}
-		}
-		return *latest.Average, *latest.Timestamp, nil
+		return resp.Datapoints, nil
 	}
 
-	cpu, ts, err := getMetric("CPUUtilization")
+	cpuPoints, err := getMetric("CPUUtilization")
 	if err != nil {
-		return dtos.ServiceMetrics{}, err
+		return nil, fmt.Errorf("failed to get cpu metric: %w", err)
 	}
-	mem, _, err := getMetric("MemoryUtilization")
+	memPoints, err := getMetric("MemoryUtilization")
 	if err != nil {
-		return dtos.ServiceMetrics{}, err
+		return nil, fmt.Errorf("failed to get memory metric: %w", err)
 	}
 
-	return dtos.ServiceMetrics{
-		Timestamp: ts,
-		CPUAvg:    cpu,
-		MemAvg:    mem,
-	}, nil
+	metrics := make([]dtos.ServiceMetrics, 0, len(cpuPoints))
+
+	for i := range len(cpuPoints) {
+		metrics = append(metrics, dtos.ServiceMetrics{
+			CPUAvg:    aws.ToFloat64(cpuPoints[i].Average),
+			MemAvg:    aws.ToFloat64(memPoints[i].Average),
+			Timestamp: aws.ToTime(cpuPoints[i].Timestamp),
+		})
+	}
+
+	return metrics, nil
 }
