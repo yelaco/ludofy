@@ -28,7 +28,7 @@ Resources:
         AllowOrigins: ["*"]
         AllowHeaders:
           - Authorization
-          - Stripe-Signature
+          - Content-Type
         AllowMethods:
           - GET
           - POST
@@ -188,6 +188,8 @@ Resources:
           Properties:
             Path: /metrics
             Method: GET
+            Auth:
+              Authorizer: NONE
             ApiId: !Ref HttpApi
 
   UserGetFunction:

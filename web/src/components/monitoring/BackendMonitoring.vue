@@ -86,6 +86,7 @@ async function fetchMetrics() {
   fetch(url.toString())
     .then((res) => res.json())
     .then((data) => {
+      console.log(data);
       const usageHistory = data.serviceMetricsList
         .slice()
         .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
