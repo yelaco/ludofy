@@ -11,9 +11,9 @@ func (pr PlayerRecord) GetPlayerId() string {
 }
 
 type PlayerState struct {
-	Id     string `json:"id"`
-	Clock  string `json:"clocks"`
-	Status string `json:"status"`
+	Id     string        `json:"id"`
+	Clock  time.Duration `json:"clocks"`
+	Status string        `json:"status"`
 }
 
 func (ps PlayerState) GetPlayerId() string {
@@ -21,7 +21,7 @@ func (ps PlayerState) GetPlayerId() string {
 }
 
 type MoveRequest struct {
-	PlayerId  string    `json:"playerIdd"`
+	PlayerId  string    `json:"playerId"`
 	Uci       string    `json:"uci"`
 	Control   string    `json:"control"`
 	CreatedAt time.Time `json:"createdAt"`

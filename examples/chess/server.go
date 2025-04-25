@@ -140,7 +140,9 @@ func (h *MyServerHandler) OnHandleMatchSave(
 	matchState.PlayerStates = make([]dtos.PlayerStateRequest, 0, len(match.GetPlayers()))
 	for _, player := range match.GetPlayers() {
 		matchState.PlayerStates = append(matchState.PlayerStates, PlayerState{
-			Id: player.GetId(),
+			Id:     player.GetId(),
+			Clock:  player.(*Player).Clock,
+			Status: player.GetStatus(),
 		})
 	}
 	matchState.Move = MoveRequest{
