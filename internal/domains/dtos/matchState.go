@@ -2,6 +2,7 @@ package dtos
 
 import (
 	_ "embed"
+	"encoding/json"
 	"time"
 
 	"github.com/chess-vn/slchess/internal/domains/entities"
@@ -60,10 +61,21 @@ type NextMatchStatePageToken struct {
 }
 
 func NewMatchStateAppSyncRequest(req MatchStateRequest) MatchStateAppSyncRequest {
+	playerStatesJson, _ := json.Marshal(req.PlayerStates)
+	gameStateJson, _ := json.Marshal(req.GameState)
+	moveJson, _ := json.Marshal(req.Move)
+
 	return MatchStateAppSyncRequest{
 		Query: updateMatchStateMutation,
 		Variables: map[string]interface{}{
-			"input": req,
+			"input": map[string]interface{}{
+				"id":           req.Id,
+				"matchId":      req.MatchId,
+				"playerStates": string(playerStatesJson),
+				"gameState":    string(gameStateJson),
+				"move":         string(moveJson),
+				"timestamp":    req.Timestamp,
+			},
 		},
 	}
 }
