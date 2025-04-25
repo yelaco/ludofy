@@ -7,25 +7,32 @@
       </div>
       <div class="bg-white p-4 rounded shadow">
         <div class="text-xl font-semibold">Avg CPU Usage</div>
-        <div class="text-3xl mt-2">{{ metrics.avgCpu }}%</div>
+        <div class="text-3xl mt-2">{{ metrics.avgCpu }} %</div>
       </div>
       <div class="bg-white p-4 rounded shadow">
         <div class="text-xl font-semibold">Avg Memory Usage</div>
-        <div class="text-3xl mt-2">{{ metrics.avgMemory }} MB</div>
+        <div class="text-3xl mt-2">{{ metrics.avgMemory }} %</div>
       </div>
     </div>
 
-    <div class="bg-white p-4 rounded shadow">
-      <div class="text-xl font-semibold mb-2">📈 Resource Utilization</div>
+    <div class="bg-white p-4 rounded shadow relative">
+      <div class="flex justify-between items-start mb-2">
+        <div class="text-xl font-semibold">📈 Resource Utilization</div>
+        <TimeRangePicker @update="updateTimeRange" />
+      </div>
+
       <LineChart :chart-data="usageChartData" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from "vue";
-import { userManager } from "@/auth"; // Assuming you already have this
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { userManager } from "@/auth";
 import LineChart from "./LineChart.vue";
+import TimeRangePicker from "@/components/TimeRangePicker.vue";
+
+const showPicker = ref(false);
 
 const props = defineProps({
   metricsEndpointUrl: String,
@@ -37,6 +44,11 @@ const metrics = ref({
   avgMemory: 0,
   usageHistory: [],
 });
+
+const startTime = ref(null);
+const endTime = ref(null);
+const autoRefresh = ref(false);
+let refreshInterval = null;
 
 const usageChartData = computed(() => ({
   labels: metrics.value.usageHistory.map((d) => d.timestamp),
@@ -58,71 +70,92 @@ const usageChartData = computed(() => ({
   ],
 }));
 
-function getTimeRange(minutesAgo = 30) {
-  const end = new Date();
-  const start = new Date(end.getTime() - minutesAgo * 60 * 1000);
-  return {
-    start: start.toISOString(),
-    end: end.toISOString(),
-  };
-}
+function getAutoInterval(startISO, endISO) {
+  const start = new Date(startISO);
+  const end = new Date(endISO);
+  const diffSec = (end - start) / 1000;
+  let rawInterval = Math.ceil(diffSec / 10); // 10 data points
 
-let interval;
+  // Enforce AWS CloudWatch rules
+  if (diffSec <= 3 * 3600) {
+    // max granularity: 60s
+    return Math.max(60, Math.ceil(rawInterval / 60) * 60);
+  } else if (diffSec <= 15 * 24 * 3600) {
+    // 1 to 5 min intervals
+    return Math.max(300, Math.ceil(rawInterval / 60) * 60);
+  } else if (diffSec <= 63 * 24 * 3600) {
+    return Math.max(3600, Math.ceil(rawInterval / 3600) * 3600);
+  } else {
+    return Math.max(86400, Math.ceil(rawInterval / 86400) * 86400);
+  }
+}
 
 async function fetchMetrics() {
-  if (!props.metricsEndpointUrl) {
-    console.warn("No metricsEndpointUrl provided");
-    return;
-  }
-
-  const { start, end } = getTimeRange(30);
-  interval = 300;
+  if (!props.metricsEndpointUrl || !startTime.value || !endTime.value) return;
 
   const url = new URL(props.metricsEndpointUrl);
-  url.searchParams.set("start", start);
-  url.searchParams.set("end", end);
-  url.searchParams.set("interval", interval);
+  url.searchParams.set("start", startTime.value);
+  url.searchParams.set("end", endTime.value);
 
-  fetch(url.toString())
-    .then((res) => res.json())
-    .then((data) => {
-      console.log(data);
-      const usageHistory = data.serviceMetricsList
-        .slice()
-        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-        .map((d) => ({
-          timestamp: new Date(d.timestamp).toLocaleTimeString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          }),
-          cpu: d.cpuAvg * 100,
-          memory: d.memAvg * 1024,
-        }));
+  const period = getAutoInterval(startTime.value, endTime.value);
+  url.searchParams.set("interval", period);
 
-      const avgCpu =
-        usageHistory.reduce((acc, d) => acc + d.cpu, 0) / usageHistory.length;
-      const avgMemory =
-        usageHistory.reduce((acc, d) => acc + d.memory, 0) /
-        usageHistory.length;
+  try {
+    const user = await userManager.getUser();
 
-      metrics.value = {
-        usageHistory,
-        avgCpu: avgCpu.toFixed(2),
-        avgMemory: avgMemory.toFixed(2),
-        activeMatches: data.serverMetricsList?.[0]?.activeMatches ?? 0,
-      };
-    })
-    .catch((err) => {
-      console.error("Failed to fetch metrics:", err);
+    const res = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${user.id_token}`,
+      },
     });
+
+    const data = await res.json();
+
+    const usageHistory = data.serviceMetricsList
+      .slice()
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+      .map((d) => ({
+        timestamp: new Date(d.timestamp).toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+        cpu: d.cpuAvg,
+        memory: d.memAvg,
+      }));
+
+    const avgCpu =
+      usageHistory.reduce((acc, d) => acc + d.cpu, 0) / usageHistory.length;
+    const avgMemory =
+      usageHistory.reduce((acc, d) => acc + d.memory, 0) / usageHistory.length;
+
+    metrics.value = {
+      usageHistory,
+      avgCpu: avgCpu.toFixed(2),
+      avgMemory: avgMemory.toFixed(2),
+      activeMatches: data.serverMetricsList?.[0]?.activeMatches ?? 0,
+    };
+  } catch (err) {
+    console.error("Failed to fetch metrics:", err);
+  }
 }
 
-onMounted(() => {
+function updateTimeRange({ start, end, autoRefresh: auto }) {
+  startTime.value = start;
+  endTime.value = end;
+  autoRefresh.value = auto;
+
   fetchMetrics();
-});
+
+  if (refreshInterval) clearInterval(refreshInterval);
+  if (auto) {
+    refreshInterval = setInterval(() => {
+      fetchMetrics();
+    }, 30000);
+  }
+}
 
 onUnmounted(() => {
-  clearInterval(interval);
+  if (refreshInterval) clearInterval(refreshInterval);
 });
 </script>

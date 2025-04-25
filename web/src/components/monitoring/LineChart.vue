@@ -44,6 +44,11 @@ watch(
   () => props.chartData,
   () => {
     if (chartInstance) {
+      const allValues = props.chartData.datasets.flatMap((ds) => ds.data);
+      const maxValue = Math.max(...allValues);
+      const suggestedMax = getSuggestedMax(maxValue);
+
+      chartInstance.options.scales.y.max = suggestedMax;
       chartInstance.data = props.chartData;
       chartInstance.update();
     }
@@ -51,8 +56,22 @@ watch(
   { deep: true },
 );
 
+function getSuggestedMax(value) {
+  if (value <= 0) return 1;
+  const exponent = Math.floor(Math.log10(value));
+  const base = Math.pow(10, exponent);
+  if (value <= base) return base;
+  if (value <= 2 * base) return 2 * base;
+  if (value <= 5 * base) return 5 * base;
+  return 10 * base;
+}
+
 function createChart() {
   if (!canvas.value) return;
+
+  const allValues = props.chartData.datasets.flatMap((ds) => ds.data);
+  const maxValue = Math.max(...allValues);
+  const suggestedMax = getSuggestedMax(maxValue);
 
   chartInstance = new Chart(canvas.value, {
     type: "line",
@@ -75,7 +94,7 @@ function createChart() {
         y: {
           display: true,
           beginAtZero: true,
-          max: 100,
+          max: suggestedMax,
           title: {
             display: true,
             text: "Usage (%)",
