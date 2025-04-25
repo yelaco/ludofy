@@ -1,7 +1,7 @@
 scalar AWSJSON
 scalar AWSDateTime
 
-type MatchStateRequest {
+type MatchState {
   id: ID!
   matchId: ID!
   players: AWSJSON!
