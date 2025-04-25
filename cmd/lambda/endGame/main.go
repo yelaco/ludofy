@@ -9,8 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/chess-vn/slchess/internal/aws/storage"
-	"github.com/chess-vn/slchess/internal/domains/dtos"
 	"github.com/chess-vn/slchess/internal/domains/entities"
+	"github.com/chess-vn/slchess/pkg/server"
 )
 
 var storageClient *storage.Client
@@ -21,11 +21,11 @@ func init() {
 }
 
 func handler(ctx context.Context, event json.RawMessage) error {
-	var matchRecordReq dtos.MatchRecordRequest
+	var matchRecordReq server.MatchRecordRequest
 	if err := json.Unmarshal(event, &matchRecordReq); err != nil {
 		return fmt.Errorf("failed to unmarshal request: %w", err)
 	}
-	matchRecord := dtos.MatchRecordRequestToEntity(matchRecordReq)
+	matchRecord := server.MatchRecordRequestToEntity(matchRecordReq)
 
 	for _, player := range matchRecord.Players {
 		err := storageClient.DeleteUserMatch(ctx, player.GetPlayerId())

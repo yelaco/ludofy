@@ -207,8 +207,9 @@ func (m *Match) notifyPlayers(resp gameStateResponse) {
 		})
 		if err != nil {
 			logging.Error(
-				"couldn't notify player: ",
+				"couldn't notify player",
 				zap.String("player_id", player.GetId()),
+				zap.Error(err),
 			)
 		}
 	}
@@ -246,13 +247,12 @@ func ConfigForGameMode(gameMode string) (MatchConfig, error) {
 /*
  * Implement MatchHandler interface
  */
-type MyMatchHandler struct{}
+type MyMatchHandler struct {
+	match *Match
+}
 
-func (h *MyMatchHandler) OnPlayerJoin(
-	matchInterface server.Match,
-	playerInterface server.Player,
-) (bool, error) {
-	match := matchInterface.(*Match)
+func (h *MyMatchHandler) OnPlayerJoin(playerInterface server.Player) (bool, error) {
+	match := h.GetMatch().(*Match)
 	player := playerInterface.(*Player)
 	if player.GetStatus() == INIT && player.Side == WHITE_SDIE {
 		match.StartedAt = time.Now()
@@ -263,11 +263,8 @@ func (h *MyMatchHandler) OnPlayerJoin(
 	return false, nil
 }
 
-func (h *MyMatchHandler) OnPlayerLeave(
-	matchInterface server.Match,
-	playerInterface server.Player,
-) error {
-	match := matchInterface.(*Match)
+func (h *MyMatchHandler) OnPlayerLeave(playerInterface server.Player) error {
+	match := h.GetMatch().(*Match)
 	currentClock := match.getCurrentTurnPlayer().Clock
 
 	if !match.IsEnded() {
@@ -292,11 +289,8 @@ func (h *MyMatchHandler) OnPlayerLeave(
 	return nil
 }
 
-func (h *MyMatchHandler) OnPlayerSync(
-	matchInterface server.Match,
-	playerInterface server.Player,
-) error {
-	match := matchInterface.(*Match)
+func (h *MyMatchHandler) OnPlayerSync(playerInterface server.Player) error {
+	match := h.GetMatch().(*Match)
 	player := playerInterface.(*Player)
 
 	resp := matchResponse{
@@ -325,11 +319,10 @@ func (h *MyMatchHandler) OnPlayerSync(
 }
 
 func (h *MyMatchHandler) HandleMove(
-	matchInterface server.Match,
 	playerInterface server.Player,
 	moveInterface server.Move,
 ) error {
-	match := matchInterface.(*Match)
+	match := h.GetMatch().(*Match)
 	player := playerInterface.(*Player)
 	move := moveInterface.(*Move)
 	switch move.Control {
@@ -435,21 +428,27 @@ func (h *MyMatchHandler) HandleMove(
 	return nil
 }
 
-func (h *MyMatchHandler) OnMatchAbort(match server.Match) error {
+func (h *MyMatchHandler) OnMatchAbort() error {
 	return nil
 }
 
-func (h *MyMatchHandler) OnMatchSave(match server.Match) error {
+func (h *MyMatchHandler) OnMatchSave() error {
 	return nil
 }
 
-func (h *MyMatchHandler) OnMatchEnd(matchInterface server.Match) error {
-	match := matchInterface.(*Match)
+func (h *MyMatchHandler) OnMatchEnd() error {
+	match := h.GetMatch().(*Match)
 	match.skipTimer()
 	match.checkTimeout()
 	return nil
 }
 
-func NewMatchHandler() server.MatchHandler {
-	return &MyMatchHandler{}
+func (h *MyMatchHandler) GetMatch() server.Match {
+	return h.match
+}
+
+func NewMatchHandler(match *Match) server.MatchHandler {
+	return &MyMatchHandler{
+		match: match,
+	}
 }

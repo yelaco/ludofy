@@ -20,7 +20,8 @@ type Server interface {
 
 type Match interface {
 	start()
-	setHandler(MatchHandler)
+	GetHandler() MatchHandler
+	SetHandler(MatchHandler)
 	setSaveCallback(func(Match))
 	setEndCallback(func(Match))
 	setAbortCallback(func(Match))

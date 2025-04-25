@@ -9,8 +9,7 @@ import (
 // Run server
 func main() {
 	serverHandler := NewServerHandler()
-	matchHandler := NewMatchHandler()
-	cfg := server.NewConfig("7202", serverHandler, matchHandler)
+	cfg := server.NewConfig("7202", serverHandler)
 	srv := server.NewFromConfig(cfg)
 	logging.Fatal("server runtime error", zap.Error(srv.Start()))
 }

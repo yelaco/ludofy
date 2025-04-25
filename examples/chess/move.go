@@ -21,8 +21,8 @@ type Move struct {
 	CreatedAt time.Time
 }
 
-func NewMove(playerId string) Move {
-	return Move{
+func NewMove(playerId string) *Move {
+	return &Move{
 		Move: server.NewDefaultMove(playerId),
 	}
 }

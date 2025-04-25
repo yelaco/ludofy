@@ -43,7 +43,7 @@ func (m *DefaultMatch) start() {
 			})
 			continue
 		}
-		m.handler.HandleMove(m, player, move)
+		m.handler.HandleMove(player, move)
 	}
 }
 
@@ -58,12 +58,12 @@ func (m *DefaultMatch) Abort() {
 		close(m.moveCh)
 	}
 	m.DisconnectPlayers("match aborted", time.Now().Add(5*time.Second))
-	m.handler.OnMatchAbort(m)
+	m.handler.OnMatchAbort()
 	m.abortCallback(m)
 }
 
 func (m *DefaultMatch) Save() {
-	m.handler.OnMatchSave(m)
+	m.handler.OnMatchSave()
 	m.saveCallback(m)
 }
 
@@ -77,7 +77,7 @@ func (m *DefaultMatch) End() {
 	if !utils.IsClosed(m.moveCh) {
 		close(m.moveCh)
 	}
-	m.handler.OnMatchEnd(m)
+	m.handler.OnMatchEnd()
 	m.DisconnectPlayers("match ended", time.Now().Add(5*time.Second))
 	m.endCallback(m)
 }
@@ -108,7 +108,7 @@ func (m *DefaultMatch) playerJoin(playerId string, conn *websocket.Conn) {
 		return
 	}
 
-	init, err := m.handler.OnPlayerJoin(m, player)
+	init, err := m.handler.OnPlayerJoin(player)
 	if err != nil {
 		logging.Error("on player join", zap.Error(err))
 	}
@@ -126,7 +126,7 @@ func (m *DefaultMatch) playerJoin(playerId string, conn *websocket.Conn) {
 	}
 
 	player.setConn(conn)
-	m.handler.OnPlayerSync(m, player)
+	m.handler.OnPlayerSync(player)
 
 	m.notifyAboutPlayerStatus(playerStatusResponse{
 		Type:     "playerStatus",
@@ -147,7 +147,7 @@ func (m *DefaultMatch) playerDisconnect(playerId string) {
 	}
 	player.setConn(nil)
 
-	m.handler.OnPlayerLeave(m, player)
+	m.handler.OnPlayerLeave(player)
 
 	m.notifyAboutPlayerStatus(playerStatusResponse{
 		Type:     "playerStatus",
@@ -184,7 +184,11 @@ func (m *DefaultMatch) DisconnectPlayers(msg string, deadline time.Time) {
 	}
 }
 
-func (m *DefaultMatch) setHandler(handler MatchHandler) {
+func (m *DefaultMatch) GetHandler() MatchHandler {
+	return m.handler
+}
+
+func (m *DefaultMatch) SetHandler(handler MatchHandler) {
 	m.handler = handler
 }
 

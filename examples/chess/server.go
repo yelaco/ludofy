@@ -40,6 +40,8 @@ func (h *MyServerHandler) OnMatchCreate(activeMatch entities.ActiveMatch) (serve
 		game:  NewGame(),
 	}
 	match.setTimer(cfg.CancelTimeout)
+	matchHandler := NewMatchHandler(&match)
+	match.SetHandler(matchHandler)
 	return match, nil
 }
 
@@ -69,12 +71,14 @@ func (h *MyServerHandler) OnMatchResume(
 		game:  game,
 	}
 	match.setTimer(cfg.CancelTimeout)
+	matchHandler := NewMatchHandler(&match)
+	match.SetHandler(matchHandler)
 	return match, nil
 }
 
 func (h *MyServerHandler) OnHandleMessage(
 	playerId string,
-	match server.Match,
+	matchHandler server.MatchHandler,
 	message []byte,
 ) error {
 	var payload Payload
@@ -103,7 +107,7 @@ func (h *MyServerHandler) OnHandleMessage(
 		default:
 			return fmt.Errorf("invalid game action: %s", payload.Type)
 		}
-		match.ProcessMove(move)
+		matchHandler.GetMatch().ProcessMove(move)
 	default:
 		return fmt.Errorf("invalid payload type: %s", payload.Type)
 	}
@@ -111,15 +115,16 @@ func (h *MyServerHandler) OnHandleMessage(
 }
 
 func (h *MyServerHandler) OnHandleMatchEnd(
-	record *dtos.MatchRecordRequest,
-	matchInterface server.Match,
+	record *server.MatchRecordRequest,
+	matchHandler server.MatchHandler,
 ) error {
-	match := matchInterface.(*Match)
-	record.Players = make([]dtos.PlayerRecordRequest, 0, len(match.GetPlayers()))
+	match := matchHandler.GetMatch().(*Match)
+	record.Players = make([]server.PlayerRecordRequest, 0, len(match.GetPlayers()))
 	for _, player := range match.GetPlayers() {
-		record.Players = append(record.Players, PlayerRecord{
-			Id: player.GetId(),
-		})
+		playerRecord := server.PlayerRecord{
+			"Id": player.GetId(),
+		}
+		record.Players = append(record.Players, playerRecord)
 	}
 	record.StartedAt = match.StartedAt
 	record.EndedAt = time.Now()
@@ -128,9 +133,9 @@ func (h *MyServerHandler) OnHandleMatchEnd(
 
 func (h *MyServerHandler) OnHandleMatchSave(
 	matchState *dtos.MatchStateRequest,
-	matchInterface server.Match,
+	matchHandler server.MatchHandler,
 ) error {
-	match := matchInterface.(*Match)
+	match := matchHandler.GetMatch().(*Match)
 	lastMove := match.game.lastMove()
 	matchState.PlayerStates = make([]dtos.PlayerStateRequest, 0, len(match.GetPlayers()))
 	for _, player := range match.GetPlayers() {
