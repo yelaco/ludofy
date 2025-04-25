@@ -159,7 +159,7 @@ func (s *DefaultServer) HandleMatchEnd(match Match) {
 	if match == nil {
 		return
 	}
-	matchRecordReq := dtos.MatchRecordRequest{
+	matchRecordReq := MatchRecordRequest{
 		MatchId: match.GetId(),
 		EndedAt: time.Now(),
 	}

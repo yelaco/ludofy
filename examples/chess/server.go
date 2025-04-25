@@ -115,11 +115,11 @@ func (h *MyServerHandler) OnHandleMessage(
 }
 
 func (h *MyServerHandler) OnHandleMatchEnd(
-	record *dtos.MatchRecordRequest,
+	record *server.MatchRecordRequest,
 	matchHandler server.MatchHandler,
 ) error {
 	match := matchHandler.GetMatch().(*Match)
-	record.Players = make([]dtos.PlayerRecordRequest, 0, len(match.GetPlayers()))
+	record.Players = make([]server.PlayerRecordRequest, 0, len(match.GetPlayers()))
 	for _, player := range match.GetPlayers() {
 		playerRecord := server.PlayerRecord{
 			"Id": player.GetId(),

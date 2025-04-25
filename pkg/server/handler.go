@@ -20,6 +20,6 @@ type ServerHandler interface {
 	OnMatchCreate(activeMatch entities.ActiveMatch) (Match, error)
 	OnMatchResume(activeMatch entities.ActiveMatch, currentState entities.MatchState) (Match, error)
 	OnHandleMessage(playerId string, match MatchHandler, message []byte) error
-	OnHandleMatchEnd(record *dtos.MatchRecordRequest, match MatchHandler) error
+	OnHandleMatchEnd(record *MatchRecordRequest, match MatchHandler) error
 	OnHandleMatchSave(matchState *dtos.MatchStateRequest, match MatchHandler) error
 }
