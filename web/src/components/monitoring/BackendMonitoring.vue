@@ -75,12 +75,6 @@ async function fetchMetrics() {
     return;
   }
 
-  const user = await userManager.getUser();
-  if (!user || !user.id_token) {
-    console.error("User not authenticated or token missing");
-    return;
-  }
-
   const { start, end } = getTimeRange(30);
   interval = 300;
 
@@ -89,12 +83,7 @@ async function fetchMetrics() {
   url.searchParams.set("end", end);
   url.searchParams.set("interval", interval);
 
-  fetch(url.toString(), {
-    headers: {
-      Authorization: `${user.id_token}`,
-      Accept: "*/*",
-    },
-  })
+  fetch(url.toString())
     .then((res) => res.json())
     .then((data) => {
       const usageHistory = data.serviceMetricsList
