@@ -35,7 +35,7 @@ func (client *Client) GetMatchRecord(
 	}
 	players := output.Item["Players"].(*types.AttributeValueMemberL).Value
 	playerRecords := []entities.PlayerRecord{}
-	if err := attributevalue.UnmarshalList(players, &players); err != nil {
+	if err := attributevalue.UnmarshalList(players, &playerRecords); err != nil {
 		return entities.MatchRecord{}, err
 	}
 	output.Item["Players"] = nil
