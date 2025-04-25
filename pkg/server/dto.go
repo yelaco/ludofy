@@ -7,15 +7,11 @@ import (
 )
 
 type MatchRecordRequest struct {
-	MatchId   string                `json:"matchId"`
-	Players   []PlayerRecordRequest `json:"players"`
-	StartedAt time.Time             `json:"startedAt"`
-	EndedAt   time.Time             `json:"endedAt"`
-	Result    interface{}           `json:"results"`
-}
-
-type PlayerRecordRequest interface {
-	GetPlayerId() string
+	MatchId   string         `json:"matchId"`
+	Players   []PlayerRecord `json:"players"`
+	StartedAt time.Time      `json:"startedAt"`
+	EndedAt   time.Time      `json:"endedAt"`
+	Result    interface{}    `json:"results"`
 }
 
 func MatchRecordRequestToEntity(req MatchRecordRequest) entities.MatchRecord {
