@@ -1,6 +1,3 @@
-scalar AWSJSON
-scalar AWSDateTime
-
 type MatchState {
   id: ID!
   matchId: ID!
