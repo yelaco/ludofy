@@ -78,7 +78,7 @@ func (h *MyServerHandler) OnMatchResume(
 
 func (h *MyServerHandler) OnHandleMessage(
 	playerId string,
-	match server.Match,
+	matchHandler server.MatchHandler,
 	message []byte,
 ) error {
 	var payload Payload
@@ -107,7 +107,7 @@ func (h *MyServerHandler) OnHandleMessage(
 		default:
 			return fmt.Errorf("invalid game action: %s", payload.Type)
 		}
-		match.ProcessMove(move)
+		matchHandler.GetMatch().ProcessMove(move)
 	default:
 		return fmt.Errorf("invalid payload type: %s", payload.Type)
 	}
@@ -116,9 +116,9 @@ func (h *MyServerHandler) OnHandleMessage(
 
 func (h *MyServerHandler) OnHandleMatchEnd(
 	record *dtos.MatchRecordRequest,
-	matchInterface server.Match,
+	matchHandler server.MatchHandler,
 ) error {
-	match := matchInterface.(*Match)
+	match := matchHandler.GetMatch().(*Match)
 	record.Players = make([]dtos.PlayerRecordRequest, 0, len(match.GetPlayers()))
 	for _, player := range match.GetPlayers() {
 		record.Players = append(record.Players, PlayerRecord{
@@ -132,9 +132,9 @@ func (h *MyServerHandler) OnHandleMatchEnd(
 
 func (h *MyServerHandler) OnHandleMatchSave(
 	matchState *dtos.MatchStateRequest,
-	matchInterface server.Match,
+	matchHandler server.MatchHandler,
 ) error {
-	match := matchInterface.(*Match)
+	match := matchHandler.GetMatch().(*Match)
 	lastMove := match.game.lastMove()
 	matchState.PlayerStates = make([]dtos.PlayerStateRequest, 0, len(match.GetPlayers()))
 	for _, player := range match.GetPlayers() {

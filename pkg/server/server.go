@@ -148,7 +148,7 @@ func (s *DefaultServer) HandleMessage(playerId string, match Match, msg []byte) 
 	if match == nil {
 		return fmt.Errorf("match not loaded")
 	}
-	err := s.handler.OnHandleMessage(playerId, match, msg)
+	err := s.handler.OnHandleMessage(playerId, match.GetHandler(), msg)
 	if err != nil {
 		return fmt.Errorf("on handle message: %w", err)
 	}
@@ -164,7 +164,7 @@ func (s *DefaultServer) HandleMatchEnd(match Match) {
 		EndedAt: time.Now(),
 	}
 
-	if err := s.handler.OnHandleMatchEnd(&matchRecordReq, match); err != nil {
+	if err := s.handler.OnHandleMatchEnd(&matchRecordReq, match.GetHandler()); err != nil {
 		logging.Fatal("failed to hanlde match end", zap.Error(err))
 	}
 
@@ -194,7 +194,7 @@ func (s *DefaultServer) HandleMatchSave(match Match) {
 		MatchId:   match.GetId(),
 		Timestamp: time.Now(),
 	}
-	s.handler.OnHandleMatchSave(&matchStateReq, match)
+	s.handler.OnHandleMatchSave(&matchStateReq, match.GetHandler())
 
 	matchStateAppSyncReq := dtos.NewMatchStateAppSyncRequest(matchStateReq)
 	payload, err := json.Marshal(matchStateAppSyncReq)

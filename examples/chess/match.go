@@ -207,8 +207,9 @@ func (m *Match) notifyPlayers(resp gameStateResponse) {
 		})
 		if err != nil {
 			logging.Error(
-				"couldn't notify player: ",
+				"couldn't notify player",
 				zap.String("player_id", player.GetId()),
+				zap.Error(err),
 			)
 		}
 	}

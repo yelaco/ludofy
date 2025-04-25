@@ -184,6 +184,10 @@ func (m *DefaultMatch) DisconnectPlayers(msg string, deadline time.Time) {
 	}
 }
 
+func (m *DefaultMatch) GetHandler() MatchHandler {
+	return m.handler
+}
+
 func (m *DefaultMatch) SetHandler(handler MatchHandler) {
 	m.handler = handler
 }
