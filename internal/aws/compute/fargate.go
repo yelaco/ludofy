@@ -177,7 +177,7 @@ func (client *Client) GetServerIps(
 		return nil, fmt.Errorf("failed to describe ECS tasks: %w", err)
 	}
 
-	serverIps := make([]string, len(listTasksOutput.TaskArns))
+	serverIps := make([]string, 0, len(listTasksOutput.TaskArns))
 	for _, task := range describeTasksOutput.Tasks {
 		for _, attachment := range task.Attachments {
 			for _, detail := range attachment.Details {

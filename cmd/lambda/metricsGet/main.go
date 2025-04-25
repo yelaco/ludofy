@@ -63,7 +63,7 @@ func handler(
 		if err != nil {
 			return events.APIGatewayProxyResponse{
 				StatusCode: http.StatusInternalServerError,
-			}, fmt.Errorf("failed to get service metrics: %w", err)
+			}, fmt.Errorf("failed to get server statuses: %w", err)
 		}
 		serverStatuses = append(serverStatuses, status)
 	}
