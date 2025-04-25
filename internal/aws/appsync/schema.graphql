@@ -2,7 +2,7 @@ type MatchState {
   Id: ID!
   MatchId: ID!
   PlayerStates: AWSJSON!
-  GameState: AWSJSON!
+  GameState: AWSJSON
   Move: AWSJSON!
   Timestamp: AWSDateTime!
 }
@@ -19,7 +19,7 @@ input UpdateMatchStateInput {
   id: ID!
   matchId: ID!
   playerStates: AWSJSON!
-  gameState: AWSJSON!
+  gameState: AWSJSON
   move: AWSJSON!
   timestamp: AWSDateTime!
 }
