@@ -1,10 +1,10 @@
-type MatchState {
-  Id: ID!
-  MatchId: ID!
-  PlayerStates: AWSJSON!
-  GameState: AWSJSON
-  Move: AWSJSON!
-  Timestamp: AWSDateTime!
+type MatchState @aws_cognito_user_pools @aws_iam {
+  Id: ID! @aws_cognito_user_pools @aws_iam
+  MatchId: ID! @aws_cognito_user_pools @aws_iam
+  PlayerStates: AWSJSON! @aws_cognito_user_pools @aws_iam
+  GameState: AWSJSON @aws_cognito_user_pools @aws_iam
+  Move: AWSJSON! @aws_cognito_user_pools @aws_iam
+  Timestamp: AWSDateTime! @aws_cognito_user_pools @aws_iam
 }
 
 type Message @aws_cognito_user_pools @aws_iam {
