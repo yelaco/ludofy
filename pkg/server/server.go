@@ -202,7 +202,6 @@ func (s *DefaultServer) HandleMatchSave(match Match) {
 		logging.Error("Failed to save game", zap.Error(err))
 		return
 	}
-	fmt.Println(string(payload))
 
 	req, err := http.NewRequest(
 		"POST",
@@ -242,9 +241,6 @@ func (s *DefaultServer) HandleMatchSave(match Match) {
 		logging.Error("Failed to save game", zap.Error(err))
 		return
 	}
-
-	resp, _ := io.ReadAll(response.Body)
-	fmt.Println(string(resp))
 
 	if response.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(response.Body)
