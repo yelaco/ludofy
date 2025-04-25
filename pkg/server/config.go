@@ -18,7 +18,6 @@ import (
 
 type Config struct {
 	Port          string
-	MatchHandler  MatchHandler
 	ServerHandler ServerHandler
 
 	cognitoUserPoolId    string
@@ -34,7 +33,7 @@ type Config struct {
 	cognitoPublicKeys map[string]*rsa.PublicKey
 }
 
-func NewConfig(port string, serverHandler ServerHandler, matchHandler MatchHandler) Config {
+func NewConfig(port string, serverHandler ServerHandler) Config {
 	viper.AutomaticEnv()
 	protectionTimeout, err := time.ParseDuration(viper.GetString("SERVER_PROTECTION_TIMEOUT"))
 	if err != nil {
@@ -42,7 +41,6 @@ func NewConfig(port string, serverHandler ServerHandler, matchHandler MatchHandl
 	}
 	cfg := Config{
 		Port:                 port,
-		MatchHandler:         matchHandler,
 		ServerHandler:        serverHandler,
 		cognitoUserPoolId:    viper.GetString("COGNITO_USER_POOL_ID"),
 		appSyncHttpUrl:       viper.GetString("APPSYNC_HTTP_URL"),

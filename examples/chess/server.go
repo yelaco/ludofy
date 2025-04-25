@@ -40,6 +40,8 @@ func (h *MyServerHandler) OnMatchCreate(activeMatch entities.ActiveMatch) (serve
 		game:  NewGame(),
 	}
 	match.setTimer(cfg.CancelTimeout)
+	matchHandler := NewMatchHandler(&match)
+	match.SetHandler(matchHandler)
 	return match, nil
 }
 
@@ -69,6 +71,8 @@ func (h *MyServerHandler) OnMatchResume(
 		game:  game,
 	}
 	match.setTimer(cfg.CancelTimeout)
+	matchHandler := NewMatchHandler(&match)
+	match.SetHandler(matchHandler)
 	return match, nil
 }
 

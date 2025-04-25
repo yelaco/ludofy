@@ -356,7 +356,6 @@ func (s *DefaultServer) loadMatch(matchId string) (Match, error) {
 			}
 		}
 
-		match.setHandler(s.cfg.MatchHandler)
 		match.setSaveCallback(s.HandleMatchSave)
 		match.setEndCallback(s.HandleMatchEnd)
 		match.setAbortCallback(s.HandleMatchAbort)

@@ -6,13 +6,14 @@ import (
 )
 
 type MatchHandler interface {
-	OnPlayerJoin(match Match, player Player) (bool, error)
-	OnPlayerLeave(match Match, player Player) error
-	OnPlayerSync(match Match, player Player) error
-	HandleMove(match Match, player Player, move Move) error
-	OnMatchSave(match Match) error
-	OnMatchEnd(match Match) error
-	OnMatchAbort(match Match) error
+	GetMatch() Match
+	OnPlayerJoin(player Player) (bool, error)
+	OnPlayerLeave(player Player) error
+	OnPlayerSync(player Player) error
+	HandleMove(player Player, move Move) error
+	OnMatchSave() error
+	OnMatchEnd() error
+	OnMatchAbort() error
 }
 
 type ServerHandler interface {
