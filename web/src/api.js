@@ -25,8 +25,8 @@ api.interceptors.request.use(
 );
 
 export default {
-  getDeployments() {
-    return api.get("/deployments");
+  getDeployments(query) {
+    return api.get(`/deployments${query}`);
   },
   deployBackend(data) {
     return api.post("/deploy", data);
@@ -43,8 +43,8 @@ export default {
   getBackend(id) {
     return api.get(`/backend/${id}`);
   },
-  getBackends() {
-    return api.get("/backends");
+  getBackends(query) {
+    return api.get(`/backends${query}`);
   },
   getDeployment(id) {
     return api.get(`/deployment/${id}`);

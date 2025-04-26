@@ -57,7 +57,8 @@ func handler(
 	resp := dtos.BackendListResponseFromEntities(backends)
 	if lastEvalKey != nil {
 		resp.NextPageToken = &dtos.NextBackendPageToken{
-			Id: lastEvalKey["Id"].(*types.AttributeValueMemberS).Value,
+			Id:        lastEvalKey["Id"].(*types.AttributeValueMemberS).Value,
+			UpdatedAt: lastEvalKey["UpdatedAt"].(*types.AttributeValueMemberS).Value,
 		}
 	}
 
@@ -107,6 +108,9 @@ func extractParameters(
 			},
 			"Id": &types.AttributeValueMemberS{
 				Value: nextPageToken.Id,
+			},
+			"UpdatedAt": &types.AttributeValueMemberS{
+				Value: nextPageToken.UpdatedAt,
 			},
 		}
 	}

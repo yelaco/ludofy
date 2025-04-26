@@ -2,23 +2,49 @@
   <div class="p-6 max-w-5xl mx-auto">
     <h1 class="text-2xl font-bold mb-6">📦 Deployment History</h1>
 
-    <div v-if="deployments.length === 0" class="text-gray-500">
-      No deployments yet.
+    <!-- Loading Spinner -->
+    <div v-if="loading" class="flex justify-center items-center py-12">
+      <svg
+        class="animate-spin h-8 w-8 text-blue-500"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+        />
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+      </svg>
     </div>
 
+    <!-- No Data -->
+    <div
+      v-else-if="deployments.length === 0 && !hasPreviousPage"
+      class="text-center text-gray-500 py-12"
+    >
+      <div class="text-5xl mb-4">📦</div>
+      <p>No deployments yet.</p>
+    </div>
+
+    <!-- Deployment List -->
     <div v-else class="space-y-4">
       <div
         v-for="(deployment, idx) in deployments"
         :key="deployment.id"
-        class="border rounded-md p-4 shadow-sm bg-white"
+        class="border rounded-md p-4 shadow-sm bg-white cursor-pointer"
+        @click="toggleExpand(idx)"
       >
-        <!-- Header (always shown) -->
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-2">
-            <button @click="toggleExpand(idx)" class="focus:outline-none">
+            <span>
               <span v-if="expanded[idx]">🔽</span>
               <span v-else>▶️</span>
-            </button>
+            </span>
             <h2 class="text-lg font-semibold text-blue-800">
               {{ deployment.input.stackName }}
             </h2>
@@ -52,14 +78,14 @@
           </div>
         </div>
 
-        <!-- Details (only when expanded) -->
+        <!-- Expanded Details -->
         <div v-if="expanded[idx]" class="mt-4 space-y-3 text-sm text-gray-700">
           <p>
-            <strong>🪪 Deployment ID: </strong>
+            <strong>🪪 Deployment ID:</strong>
             <span class="font-mono">{{ deployment.id }}</span>
           </p>
           <p>
-            🐳 <strong>Server Image: </strong>
+            🐳 <strong>Server Image:</strong>
             <span class="font-mono">{{
               deployment.input.serverConfiguration.containerImage.uri
             }}</span>
@@ -129,16 +155,69 @@
           </div>
         </div>
       </div>
+
+      <!-- Pagination Toolbar -->
+      <div
+        class="flex flex-col md:flex-row justify-between items-center gap-4 mt-6 text-sm"
+      >
+        <div class="flex items-center gap-2">
+          <span class="text-gray-600">Per page:</span>
+          <select v-model.number="pageSize" class="border rounded p-1 text-sm">
+            <option :value="5">5</option>
+            <option :value="10">10</option>
+            <option :value="20">20</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button
+            class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+            :disabled="!hasPreviousPage"
+            @click="prevPage"
+          >
+            ◀️ Prev
+          </button>
+
+          <button
+            class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+            :disabled="!nextPageToken || loading"
+            @click="nextPage"
+          >
+            Next ▶️
+          </button>
+
+          <button
+            class="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+            @click="refreshDeployments"
+            :disabled="loading"
+          >
+            🔄 Refresh
+          </button>
+        </div>
+
+        <div class="text-gray-500 text-sm">
+          {{ deployments.length }} result{{
+            deployments.length !== 1 ? "s" : ""
+          }}
+          loaded
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import api from "../api.js";
 
 const deployments = ref([]);
+const cachedPages = ref([]);
+const nextPageToken = ref(null);
+const pageSize = ref(5);
+const loading = ref(false);
+
 const expanded = ref({});
+const hasPreviousPage = computed(() => cachedPages.value.length > 0);
 
 function toggleExpand(idx) {
   expanded.value[idx] = !expanded.value[idx];
@@ -147,20 +226,78 @@ function toggleExpand(idx) {
 function formatDate(isoString) {
   if (!isoString) return "Unknown date";
   const date = new Date(isoString);
-  return date.toLocaleString(); // "4/20/2025, 10:30:00 PM" (localized to user's timezone)
+  return date.toLocaleString();
 }
 
-onMounted(async () => {
+async function loadDeployments(startKey = null, useCache = false) {
+  loading.value = true;
   try {
-    const response = await api.getDeployments();
-    deployments.value = response.data.items;
+    const params = new URLSearchParams();
+    params.set("limit", pageSize.value);
+    if (startKey) {
+      params.set("startKey", JSON.stringify(startKey));
+    }
 
-    // Initialize all deployments collapsed
+    const response = await api.getDeployments(`?${params.toString()}`);
+
+    if (!useCache && deployments.value.length > 0) {
+      cachedPages.value.push({
+        items: deployments.value,
+        nextPageToken: nextPageToken.value,
+      });
+    }
+
+    deployments.value = response.data.items;
+    nextPageToken.value = response.data.nextPageToken || null;
+
+    // Reset expanded on new load
+    expanded.value = {};
     deployments.value.forEach((_, idx) => {
       expanded.value[idx] = false;
     });
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function nextPage() {
+  if (!nextPageToken.value) return;
+  await loadDeployments(nextPageToken.value);
+}
+
+async function prevPage() {
+  if (cachedPages.value.length === 0) return;
+
+  const previousPage = cachedPages.value.pop();
+  deployments.value = previousPage.items;
+  nextPageToken.value = previousPage.nextPageToken;
+
+  // Rebuild expanded map for restored page
+  expanded.value = {};
+  deployments.value.forEach((_, idx) => {
+    expanded.value[idx] = false;
+  });
+}
+
+async function refreshDeployments() {
+  cachedPages.value = [];
+  await loadDeployments();
+}
+
+watch(pageSize, async () => {
+  cachedPages.value = [];
+  await loadDeployments();
+});
+
+onMounted(async () => {
+  try {
+    await loadDeployments();
   } catch (error) {
     console.error("Failed to fetch deployments", error);
   }
 });
 </script>
+
+<style scoped>
+/* Spinner already built-in */
+</style>

@@ -60,7 +60,8 @@ func handler(
 	resp := dtos.DeploymentListResponseFromEntities(deployments)
 	if lastEvalKey != nil {
 		resp.NextPageToken = &dtos.NextDeploymentPageToken{
-			Id: lastEvalKey["Id"].(*types.AttributeValueMemberS).Value,
+			Id:        lastEvalKey["Id"].(*types.AttributeValueMemberS).Value,
+			CreatedAt: lastEvalKey["CreatedAt"].(*types.AttributeValueMemberS).Value,
 		}
 	}
 
@@ -110,6 +111,9 @@ func extractParameters(
 			},
 			"Id": &types.AttributeValueMemberS{
 				Value: nextPageToken.Id,
+			},
+			"CreatedAt": &types.AttributeValueMemberS{
+				Value: nextPageToken.CreatedAt,
 			},
 		}
 	}

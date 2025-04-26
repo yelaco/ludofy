@@ -22,7 +22,8 @@ type BackendListResponse struct {
 }
 
 type NextBackendPageToken struct {
-	Id string `json:"id"`
+	Id        string `json:"id"`
+	UpdatedAt string `json:"updatedAt"`
 }
 
 func BackendListResponseFromEntities(backends []entities.Backend) BackendListResponse {

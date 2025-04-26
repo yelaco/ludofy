@@ -55,7 +55,8 @@ type DeploymentListResponse struct {
 }
 
 type NextDeploymentPageToken struct {
-	Id string `json:"id"`
+	Id        string `json:"id"`
+	CreatedAt string `json:"createdAt"`
 }
 
 func DeploymentListResponseFromEntities(deployments []entities.Deployment) DeploymentListResponse {
