@@ -45,6 +45,11 @@ const routes = [
     name: "Settings",
     component: Settings,
   },
+  {
+    path: "/help/customization",
+    name: "CustomizationHelp",
+    component: () => import("@/views/help/Customization.vue"),
+  },
 ];
 
 const router = createRouter({

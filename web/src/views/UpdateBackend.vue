@@ -24,6 +24,15 @@
       </label>
 
       <template v-if="useCustomization">
+        <!-- Help Link -->
+        <div class="mb-4">
+          <RouterLink
+            to="/help/customization"
+            class="text-sm text-blue-600 hover:underline"
+          >
+            📄 Need help with customization?
+          </RouterLink>
+        </div>
         <div class="space-y-4">
           <input
             type="file"
