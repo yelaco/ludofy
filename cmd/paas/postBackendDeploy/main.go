@@ -69,7 +69,10 @@ func handler(ctx context.Context, event dtos.BackendDeployEvent) error {
 		status = "successful"
 	case "FAILED":
 		prefix := fmt.Sprintf("%s/%s/", deployment.UserId, deployment.BackendId)
-		storageClient.RemoveTemplates(ctx, prefix)
+		err := storageClient.RemoveTemplates(ctx, prefix)
+		if err != nil {
+			return fmt.Errorf("failed to remove templates: %w", err)
+		}
 		status = "failed"
 	case "RUNNING":
 		status = "deploying"

@@ -435,6 +435,7 @@ Resources:
               Resource: "*"
       Environment:
         Variables:
+          MAIN_BUCKET_NAME: !Ref StackName
           DEPLOYMENTS_TABLE_NAME: !Ref Deployments
           BACKENDS_TABLE_NAME: !Ref Backends
 
