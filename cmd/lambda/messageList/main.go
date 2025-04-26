@@ -84,13 +84,14 @@ func extractParameters(
 	if !ok {
 		return "", nil, 0, fmt.Errorf("conversationId required")
 	}
-	limit := 10
+
+	var limit int32 = 10
 	if limitStr, ok := params["limit"]; ok {
 		limitInt64, err := strconv.ParseInt(limitStr, 10, 32)
 		if err != nil {
 			return "", nil, 0, fmt.Errorf("invalid limit: %v", err)
 		}
-		limit = int(limitInt64)
+		limit = int32(limitInt64)
 	}
 
 	// Check for startKey (optional)
@@ -113,7 +114,7 @@ func extractParameters(
 		}
 	}
 
-	return conversationId, startKey, int32(limit), nil
+	return conversationId, startKey, limit, nil
 }
 
 func main() {

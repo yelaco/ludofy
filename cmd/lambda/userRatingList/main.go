@@ -73,14 +73,14 @@ func extractScanParameters(params map[string]string) (
 	int32,
 	error,
 ) {
+	var limit int32 = 10
 	limitStr, ok := params["limit"]
-	if !ok {
-		return nil, 0, fmt.Errorf("missing parameter: limit")
-	}
-
-	limit, err := strconv.ParseInt(limitStr, 10, 32)
-	if err != nil {
-		return nil, 0, fmt.Errorf("invalid limit: %v", err)
+	if ok {
+		limitInt64, err := strconv.ParseInt(limitStr, 10, 32)
+		if err != nil {
+			return nil, 0, fmt.Errorf("invalid limit: %v", err)
+		}
+		limit = int32(limitInt64)
 	}
 
 	// Check for startKey (optional)
@@ -98,7 +98,7 @@ func extractScanParameters(params map[string]string) (
 		}
 	}
 
-	return startKey, int32(limit), nil
+	return startKey, limit, nil
 }
 
 func main() {
