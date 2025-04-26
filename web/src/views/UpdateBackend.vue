@@ -26,12 +26,14 @@
       <template v-if="useCustomization">
         <!-- Help Link -->
         <div class="mb-4">
-          <RouterLink
-            to="/help/customization"
+          <a
+            href="/help/customization"
+            target="_blank"
+            rel="noopener noreferrer"
             class="text-sm text-blue-600 hover:underline"
           >
             📄 Need help with customization?
-          </RouterLink>
+          </a>
         </div>
         <div class="space-y-4">
           <input

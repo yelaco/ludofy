@@ -16,3 +16,35 @@ Parameters:
     Type: String
 
 Resources:
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: HelloWorldFunction
+      Runtime: python3.12
+      Handler: index.handler
+      InlineCode: |
+        import json
+
+        def handler(event, context):
+            return {
+                "statusCode": 200,
+                "headers": {
+                "Content-Type": "application/json"
+                },
+                "body": json.dumps({"message": "Hello, World!"})
+            }
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /helloWorld
+            Method: GET
+            ApiId:
+              Fn::ImportValue: !Sub "${StackName}-HttpApiId"
+
+Outputs:
+  HelloWorldEndpointUrl:
+    Value: !Sub
+      - "GET ${HttpApiEndpoint}/helloWorld"
+      - HttpApiEndpoint:
+          Fn::ImportValue: !Sub "${StackName}-HttpApiEndpoint"

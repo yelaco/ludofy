@@ -1,4 +1,4 @@
-import { UserManager } from "oidc-client-ts";
+import { WebStorageStateStore, UserManager } from "oidc-client-ts";
 
 const cognitoAuthConfig = {
   authority: `https://cognito-idp.ap-southeast-2.amazonaws.com/${import.meta.env.VITE_COGNITO_USER_POOL_ID}`,
@@ -6,6 +6,8 @@ const cognitoAuthConfig = {
   redirect_uri: import.meta.env.VITE_REDIRECT_SIGN_IN,
   response_type: "code",
   scope: "openid email profile",
+  post_logout_redirect_uri: "http://localhost:5173/",
+  userStore: new WebStorageStateStore({ store: window.localStorage }),
 };
 
 export const userManager = new UserManager({

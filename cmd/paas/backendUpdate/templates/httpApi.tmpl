@@ -739,3 +739,8 @@ Outputs:
     Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}"
     Export:
       Name: !Sub "${StackName}-HttpApiEndpoint"
+
+  HttpApiId:
+    Value: !Ref HttpApi
+    Export:
+      Name: !Sub "${StackName}-HttpApiId"
