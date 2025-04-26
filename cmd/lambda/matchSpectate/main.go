@@ -60,7 +60,7 @@ func handler(
 		if !errors.Is(err, storage.ErrMatchStateNotFound) {
 			return events.APIGatewayProxyResponse{
 				StatusCode: http.StatusInternalServerError,
-			}, fmt.Errorf("failed to get match state: %w", err)
+			}, fmt.Errorf("failed to fetch match states: %w", err)
 		}
 	}
 

@@ -47,6 +47,7 @@ func handler(
 			StatusCode: http.StatusBadRequest,
 		}, fmt.Errorf("failed to extract parameters: %w", err)
 	}
+
 	matchStates, lastEvalKey, err := storageClient.FetchMatchStates(
 		ctx,
 		matchId,
@@ -89,13 +90,13 @@ func extractScanParameters(
 	bool,
 	error,
 ) {
-	limit := 20
+	var limit int32 = 20
 	if limitStr, ok := params["limit"]; ok {
 		limitInt64, err := strconv.ParseInt(limitStr, 10, 32)
 		if err != nil {
 			return nil, 0, false, fmt.Errorf("invalid limit: %v", err)
 		}
-		limit = int(limitInt64)
+		limit = int32(limitInt64)
 	}
 
 	// Check for startKey (optional)
@@ -120,7 +121,7 @@ func extractScanParameters(
 		}
 	}
 
-	return startKey, int32(limit), order, nil
+	return startKey, limit, order, nil
 }
 
 func main() {
