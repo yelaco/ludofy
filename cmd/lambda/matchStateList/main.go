@@ -105,7 +105,7 @@ func extractScanParameters(
 		var nextPageToken dtos.NextMatchStatePageToken
 		err := json.Unmarshal([]byte(startKeyStr), &nextPageToken)
 		if err != nil {
-			return nil, 0, false, err
+			return nil, 0, false, fmt.Errorf("failed to unmarshal: %w", err)
 		}
 		startKey = map[string]types.AttributeValue{
 			"Id":        &types.AttributeValueMemberS{Value: nextPageToken.Id},

@@ -103,11 +103,12 @@ func MatchStateRequestToEntity(req MatchStateRequest) entities.MatchState {
 
 func MatchStateResponseFromEntitiy(matchState entities.MatchState) MatchStateResponse {
 	resp := MatchStateResponse{
-		Id:        matchState.Id,
-		MatchId:   matchState.MatchId,
-		GameState: matchState.GameState,
-		Move:      matchState.Move,
-		Timestamp: matchState.Timestamp,
+		Id:           matchState.Id,
+		MatchId:      matchState.MatchId,
+		GameState:    matchState.GameState,
+		PlayerStates: make([]PlayerStateResponse, 0, len(matchState.PlayerStates)),
+		Move:         matchState.Move,
+		Timestamp:    matchState.Timestamp,
 	}
 	for _, playerState := range matchState.PlayerStates {
 		resp.PlayerStates = append(resp.PlayerStates, playerState)

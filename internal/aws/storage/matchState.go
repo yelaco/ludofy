@@ -43,15 +43,16 @@ func (client *Client) FetchMatchStates(
 	matchStates := make([]entities.MatchState, 0, len(output.Items))
 	for _, item := range output.Items {
 		matchState := entities.MatchState{
-			PlayerStates: []entities.PlayerStateInterface{},
-			Move:         make(entities.Move),
+			Move: make(entities.Move),
 		}
 
+		list := item["PlayerStates"].(*types.AttributeValueMemberL).Value
+		playerStates := make([]entities.PlayeState, 0, len(list))
 		if err := attributevalue.UnmarshalList(
-			item["PlayerStates"].(*types.AttributeValueMemberL).Value,
-			&matchState.PlayerStates,
+			list,
+			&playerStates,
 		); err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to unmarshal list: %w", err)
 		}
 
 		if err := attributevalue.UnmarshalMap(
@@ -61,12 +62,17 @@ func (client *Client) FetchMatchStates(
 			return nil, nil, err
 		}
 
-		delete(item, "PlayerStates")
-		delete(item, "Move")
+		item["PlayerStates"] = nil
+		item["Move"] = nil
 
 		err := attributevalue.UnmarshalMap(item, &matchState)
 		if err != nil {
 			return nil, nil, err
+		}
+
+		matchState.PlayerStates = make([]entities.PlayerStateInterface, 0, len(playerStates))
+		for _, state := range playerStates {
+			matchState.PlayerStates = append(matchState.PlayerStates, state)
 		}
 
 		matchStates = append(matchStates, matchState)
