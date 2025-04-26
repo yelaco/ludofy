@@ -93,6 +93,16 @@ Resources:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
 
+{{- if .UseCustomization }}
+  CustomizationStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./templates/customization.yaml
+      Parameters:
+        StackName: !Ref AWS::StackName
+        DeploymentStage: !Ref DeploymentStage
+{{- end }}
+
 Outputs:
   AppSyncGraphQLApiUrl:
     Description: AppSync GraphQL API endpoint URL

@@ -4,7 +4,7 @@
 
     <!-- Stack Name Input -->
     <div class="mb-6">
-      <label class="block text-sm font-medium">Stack Name</label>
+      <label class="block text-sm font-medium">Stack name</label>
       <input
         type="text"
         v-model="stackName"
@@ -14,6 +14,29 @@
     </div>
 
     <ServiceSelector v-model="services" />
+
+    <!-- Customization -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold mb-2">🛠️ Customization</h2>
+      <label class="flex items-center space-x-2 mb-4">
+        <input type="checkbox" v-model="useCustomization" class="w-4 h-4" />
+        <span class="text-sm font-medium">Use custom template (.yaml)</span>
+      </label>
+
+      <template v-if="useCustomization">
+        <div class="space-y-4">
+          <input
+            type="file"
+            accept=".yaml,.yml"
+            @change="handleCustomizationFileUpload"
+            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          />
+          <p v-if="uploadingCustomization" class="text-sm text-gray-500">
+            Uploading customization file...
+          </p>
+        </div>
+      </template>
+    </div>
 
     <!-- Matchmaking Configuration -->
     <div class="mb-8">
@@ -35,7 +58,7 @@
 
         <template v-if="services.ranking">
           <div>
-            <label class="block text-sm font-medium">Rating Algorithm</label>
+            <label class="block text-sm font-medium">Rating algorithm</label>
             <select v-model="matchmaking.ratingAlgorithm" class="input">
               <option value="glicko">Glicko</option>
               <option value="elo">ELO</option>
@@ -43,7 +66,7 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium">Initial Rating</label>
+            <label class="block text-sm font-medium">Initial rating</label>
             <input
               type="number"
               v-model="matchmaking.initialRating"
@@ -60,7 +83,7 @@
       <h2 class="text-xl font-semibold mb-2">🖥️ Server Configuration</h2>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium">Server Image URI</label>
+          <label class="block text-sm font-medium">Server image URI</label>
           <input
             type="text"
             v-model="serverImageUri"
@@ -83,7 +106,7 @@
         <template v-if="privateRegistry">
           <div class="space-y-4 mt-4">
             <div>
-              <label class="block text-sm font-medium">Registry Username</label>
+              <label class="block text-sm font-medium">Registry username</label>
               <input
                 type="text"
                 v-model="registryCredentials.username"
@@ -102,7 +125,7 @@
               </p>
             </div>
             <div class="relative">
-              <label class="block text-sm font-medium">Registry Password</label>
+              <label class="block text-sm font-medium">Registry password</label>
               <input
                 :type="showPassword ? 'text' : 'password'"
                 v-model="registryCredentials.password"
@@ -132,7 +155,7 @@
 
         <div class="mb-4">
           <label class="block text-sm font-medium"
-            >Max Concurrent Matches (Per Server)</label
+            >Max concurrent matches (per server)</label
           >
           <input
             type="number"
@@ -231,6 +254,10 @@ const serverImageUri = ref("");
 
 const privateRegistry = ref(false);
 const registryCredentials = ref({ username: "", password: "" });
+
+const useCustomization = ref(false); // new
+const customizationFile = ref(null); // new
+const uploadingCustomization = ref(false); // new
 
 const toastMessage = ref("");
 const toastType = ref("success");
@@ -343,6 +370,7 @@ async function submit() {
       includeFriendService: services.value.friend,
       includeRankingService: services.value.ranking,
       includeMatchSpectatingService: services.value.matchSpectating,
+      useCustomization: useCustomization.value,
       matchmakingConfiguration: {
         matchSize: matchmaking.value.matchSize,
         ratingAlgorithm: matchmaking.value.ratingAlgorithm,
@@ -404,6 +432,55 @@ function showToast(message, type = "success", duration = 3000) {
   setTimeout(() => {
     toastMessage.value = "";
   }, duration);
+}
+
+async function handleCustomizationFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (
+    ![
+      "application/x-yaml",
+      "text/yaml",
+      "text/x-yaml",
+      "application/octet-stream",
+    ].includes(file.type) &&
+    !file.name.endsWith(".yaml") &&
+    !file.name.endsWith(".yml")
+  ) {
+    showToast("Invalid file type. Please upload a .yaml file.", "error");
+    return;
+  }
+
+  customizationFile.value = file;
+
+  try {
+    uploadingCustomization.value = true;
+    // 1. Request presigned URL
+    const { data } = await api.getPresignedCustomizationUrl(id);
+    const uploadUrl = data.url;
+
+    // 2. Upload file to S3
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/x-yaml",
+      },
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error("Upload failed");
+    }
+
+    showToast("Customization file uploaded successfully!", "success");
+  } catch (error) {
+    console.error("Failed to upload customization file", error);
+    showToast("Failed to upload customization file.", "error");
+    useCustomization.value = false;
+    customizationFile.value = null;
+  } finally {
+    uploadingCustomization.value = false;
+  }
 }
 </script>
 

@@ -4,7 +4,7 @@
 
     <!-- Stack Name Input -->
     <div class="mb-6">
-      <label class="block text-sm font-medium">Stack Name</label>
+      <label class="block text-sm font-medium">Stack name</label>
       <input
         type="text"
         v-model="stackName"
@@ -39,7 +39,7 @@
 
         <template v-if="services.ranking">
           <div>
-            <label class="block text-sm font-medium">Rating Algorithm</label>
+            <label class="block text-sm font-medium">Rating algorithm</label>
             <select v-model="matchmaking.ratingAlgorithm" class="input">
               <option value="glicko">Glicko</option>
               <option value="elo">ELO</option>
@@ -47,7 +47,7 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium">Initial Rating</label>
+            <label class="block text-sm font-medium">Initial rating</label>
             <input
               type="number"
               v-model="matchmaking.initialRating"
@@ -64,7 +64,7 @@
       <h2 class="text-xl font-semibold mb-2">🖥️ Server Configuration</h2>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium">Server Image URI</label>
+          <label class="block text-sm font-medium">Server image URI</label>
           <input
             type="text"
             v-model="serverImageUri"
@@ -87,7 +87,7 @@
         <template v-if="privateRegistry">
           <div class="space-y-4 mt-4">
             <div>
-              <label class="block text-sm font-medium">Registry Username</label>
+              <label class="block text-sm font-medium">Registry username</label>
               <input
                 type="text"
                 v-model="registryCredentials.username"
@@ -106,7 +106,7 @@
               </p>
             </div>
             <div class="relative">
-              <label class="block text-sm font-medium">Registry Password</label>
+              <label class="block text-sm font-medium">Registry password</label>
               <input
                 :type="showPassword ? 'text' : 'password'"
                 v-model="registryCredentials.password"
@@ -136,7 +136,7 @@
 
         <div class="mb-4">
           <label class="block text-sm font-medium"
-            >Max Concurrent Matches (Per Server)</label
+            >Max concurrent matches (per server)</label
           >
           <input
             type="number"

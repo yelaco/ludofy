@@ -34,6 +34,9 @@ export default {
   updateBackend(data) {
     return api.post("/update", data);
   },
+  getPresignedCustomizationUrl(id) {
+    return api.post(`/backend/${id}/customize`);
+  },
   getBackendDeployment(id) {
     return api.get(`/backend/${id}/deployment`);
   },

@@ -11,6 +11,7 @@ type DeployInput struct {
 	IncludeChatService            bool                          `json:"includeChatService"`
 	IncludeFriendService          bool                          `json:"includeFriendService"`
 	IncludeRankingService         bool                          `json:"includeRankingService"`
+	UseCustomization              bool                          `json:"useCustomization"`
 	IncludeMatchSpectatingService bool                          `json:"includeMatchSpectatingService"`
 	MatchmakingConfiguration      MatchmakingConfigurationInput `json:"matchmakingConfiguration"`
 	ServerConfiguration           ServerConfigurationInput      `json:"serverConfiguration"`
