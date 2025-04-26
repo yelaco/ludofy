@@ -39,10 +39,37 @@ func (client *Client) FetchMatchStates(
 	if err != nil {
 		return nil, nil, err
 	}
-	var matchStates []entities.MatchState
-	err = attributevalue.UnmarshalListOfMaps(output.Items, &matchStates)
-	if err != nil {
-		return nil, nil, err
+
+	matchStates := make([]entities.MatchState, 0, len(output.Items))
+	for _, item := range output.Items {
+		matchState := entities.MatchState{
+			PlayerStates: []entities.PlayerStateInterface{},
+			Move:         make(entities.Move),
+		}
+
+		if err := attributevalue.UnmarshalList(
+			item["PlayerStates"].(*types.AttributeValueMemberL).Value,
+			matchState.PlayerStates,
+		); err != nil {
+			return nil, nil, err
+		}
+
+		if err := attributevalue.UnmarshalMap(
+			item["Move"].(*types.AttributeValueMemberM).Value,
+			matchState.Move,
+		); err != nil {
+			return nil, nil, err
+		}
+
+		delete(item, "PlayerStates")
+		delete(item, "Move")
+
+		err := attributevalue.UnmarshalMap(item, &matchState)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		matchStates = append(matchStates, matchState)
 	}
 
 	return matchStates, output.LastEvaluatedKey, nil

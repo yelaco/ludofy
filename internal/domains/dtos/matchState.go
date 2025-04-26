@@ -90,7 +90,7 @@ func MatchStateRequestToEntity(req MatchStateRequest) entities.MatchState {
 	matchState := entities.MatchState{
 		Id:           req.Id,
 		MatchId:      req.MatchId,
-		PlayerStates: make([]entities.PlayerState, 0, len(req.PlayerStates)),
+		PlayerStates: make([]entities.PlayerStateInterface, 0, len(req.PlayerStates)),
 		GameState:    req.GameState,
 		Move:         req.Move,
 		Timestamp:    req.Timestamp,
