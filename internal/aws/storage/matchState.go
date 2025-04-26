@@ -49,14 +49,14 @@ func (client *Client) FetchMatchStates(
 
 		if err := attributevalue.UnmarshalList(
 			item["PlayerStates"].(*types.AttributeValueMemberL).Value,
-			matchState.PlayerStates,
+			&matchState.PlayerStates,
 		); err != nil {
 			return nil, nil, err
 		}
 
 		if err := attributevalue.UnmarshalMap(
 			item["Move"].(*types.AttributeValueMemberM).Value,
-			matchState.Move,
+			&matchState.Move,
 		); err != nil {
 			return nil, nil, err
 		}
