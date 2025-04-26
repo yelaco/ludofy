@@ -70,8 +70,8 @@ func handler(
 	)
 	if lastEvaluatedKey != nil {
 		resp.MatchStates.NextPageToken = &dtos.NextMatchStatePageToken{
-			Id:  lastEvaluatedKey["Id"].(*types.AttributeValueMemberS).Value,
-			Ply: lastEvaluatedKey["Ply"].(*types.AttributeValueMemberN).Value,
+			Id:        lastEvaluatedKey["Id"].(*types.AttributeValueMemberS).Value,
+			Timestamp: lastEvaluatedKey["Timestamp"].(*types.AttributeValueMemberN).Value,
 		}
 	}
 	respJson, err := json.Marshal(resp)

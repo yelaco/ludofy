@@ -56,8 +56,8 @@ type MatchStateListResponse struct {
 }
 
 type NextMatchStatePageToken struct {
-	Id  string `json:"id"`
-	Ply string `json:"ply"`
+	Id        string `json:"id"`
+	Timestamp string `json:"timestamp"`
 }
 
 func NewMatchStateAppSyncRequest(req MatchStateRequest) MatchStateAppSyncRequest {

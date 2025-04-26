@@ -63,8 +63,8 @@ func handler(
 	resp := dtos.MatchStateListResponseFromEntities(matchStates)
 	if lastEvalKey != nil {
 		resp.NextPageToken = &dtos.NextMatchStatePageToken{
-			Id:  lastEvalKey["Id"].(*types.AttributeValueMemberS).Value,
-			Ply: lastEvalKey["Ply"].(*types.AttributeValueMemberN).Value,
+			Id:        lastEvalKey["Id"].(*types.AttributeValueMemberS).Value,
+			Timestamp: lastEvalKey["Timestamp"].(*types.AttributeValueMemberS).Value,
 		}
 	}
 
@@ -107,9 +107,9 @@ func extractScanParameters(
 			return nil, 0, false, err
 		}
 		startKey = map[string]types.AttributeValue{
-			"Id":      &types.AttributeValueMemberS{Value: nextPageToken.Id},
-			"MatchId": &types.AttributeValueMemberS{Value: matchId},
-			"Ply":     &types.AttributeValueMemberN{Value: nextPageToken.Ply},
+			"Id":        &types.AttributeValueMemberS{Value: nextPageToken.Id},
+			"MatchId":   &types.AttributeValueMemberS{Value: matchId},
+			"Timestamp": &types.AttributeValueMemberN{Value: nextPageToken.Timestamp},
 		}
 	}
 

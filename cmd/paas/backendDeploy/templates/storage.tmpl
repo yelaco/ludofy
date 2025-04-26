@@ -281,8 +281,8 @@ Resources:
           AttributeType: S
         - AttributeName: MatchId
           AttributeType: S
-        - AttributeName: Ply
-          AttributeType: N
+        - AttributeName: Timestamp
+          AttributeType: S
       KeySchema:
         - AttributeName: Id
           KeyType: HASH
@@ -291,7 +291,7 @@ Resources:
           KeySchema:
             - AttributeName: MatchId
               KeyType: HASH
-            - AttributeName: Ply
+            - AttributeName: Timestamp
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
