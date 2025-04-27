@@ -62,10 +62,10 @@
 
     <!-- Back Button -->
     <RouterLink
-      to="/backends"
+      to="/help"
       class="inline-block mt-10 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
     >
-      ← Back to backends
+      ← Back to help page
     </RouterLink>
   </div>
 </template>

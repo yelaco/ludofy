@@ -58,13 +58,20 @@
           label="Deployments"
           :collapsed="collapsed"
         />
+
         <SidebarLink
-          to="/settings"
-          icon="Settings"
-          label="Settings"
+          to="/help"
+          icon="BookOpen"
+          label="Help"
           :collapsed="collapsed"
         />
       </nav>
+      <SidebarLink
+        to="/settings"
+        icon="Settings"
+        label="Settings"
+        :collapsed="collapsed"
+      />
     </aside>
 
     <div class="flex-1 flex flex-col">

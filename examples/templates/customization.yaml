@@ -1,0 +1,50 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Customization Stack
+
+Globals:
+  Function:
+    Timeout: 5
+    MemorySize: 128
+    Architectures:
+      - arm64
+
+Parameters:
+  StackName:
+    Type: String
+  DeploymentStage:
+    Type: String
+
+Resources:
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: HelloWorldFunction
+      Runtime: python3.12
+      Handler: index.handler
+      InlineCode: |
+        import json
+
+        def handler(event, context):
+            return {
+                "statusCode": 200,
+                "headers": {
+                "Content-Type": "application/json"
+                },
+                "body": json.dumps({"message": "Hello, World!"})
+            }
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /helloWorld
+            Method: GET
+            ApiId:
+              Fn::ImportValue: !Sub "${StackName}-HttpApiId"
+
+Outputs:
+  HelloWorldEndpointUrl:
+    Value: !Sub
+      - "GET ${HttpApiEndpoint}/helloWorld"
+      - HttpApiEndpoint:
+          Fn::ImportValue: !Sub "${StackName}-HttpApiEndpoint"

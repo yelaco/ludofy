@@ -8,6 +8,7 @@ import BackendDetail from "./views/BackendDetail.vue";
 import Deployments from "./views/Deployments.vue";
 import Backends from "./views/Backends.vue";
 import Settings from "./views/Settings.vue";
+import Help from "./views/Help.vue";
 import HelpCustomization from "@/views/help/Customization.vue";
 
 const routes = [
@@ -50,6 +51,11 @@ const routes = [
     path: "/help/customization",
     name: "HelpCustomization",
     component: HelpCustomization,
+  },
+  {
+    path: "/help",
+    name: "Help",
+    component: Help,
   },
 ];
 
