@@ -118,6 +118,18 @@
             </ul>
           </div>
 
+          <p class="flex items-center gap-2">
+            <span
+              v-if="deployment.input.useCustomization"
+              class="text-gray-600 flex items-center gap-1"
+            >
+              ✅ <strong>Customization: </strong>Enabled
+            </span>
+            <span v-else class="text-gray-600 flex items-center gap-1">
+              🚫 <strong>Customization: </strong>Disabled
+            </span>
+          </p>
+
           <div>
             🎯 <strong>Matchmaking Configuration:</strong>
             <ul class="list-disc list-inside ml-4">

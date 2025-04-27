@@ -532,6 +532,11 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref Backends
         - CloudFormationDescribeStacksPolicy: {}
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cloudformation:ListStacks
+              Resource: "*"
       Environment:
         Variables:
           BACKENDS_TABLE_NAME: !Ref Backends

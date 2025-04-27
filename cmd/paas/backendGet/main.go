@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/chess-vn/slchess/internal/paas/aws/auth"
 	"github.com/chess-vn/slchess/internal/paas/aws/storage"
@@ -51,6 +53,7 @@ func handler(
 		}, fmt.Errorf("failed to get backend: %w", err)
 	}
 
+	// Describe main stack
 	resp := dtos.BackendResponseFromEntity(backend)
 	description, err := cfClient.DescribeStacks(ctx, &cloudformation.DescribeStacksInput{
 		StackName: aws.String(backend.StackName),
@@ -68,6 +71,44 @@ func handler(
 		resp.Outputs = outputs
 	}
 
+	// Describe customization stack
+	listStacksOutput, err := cfClient.ListStacks(ctx, &cloudformation.ListStacksInput{
+		StackStatusFilter: []types.StackStatus{
+			types.StackStatusCreateComplete,
+			types.StackStatusUpdateComplete,
+		},
+	})
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+		}, fmt.Errorf("failed to list stacks: %w", err)
+	}
+
+	prefix := fmt.Sprintf("%s-CustomizationStack", backend.StackName)
+
+	var matchedStackNames []string
+	for _, summary := range listStacksOutput.StackSummaries {
+		if strings.HasPrefix(aws.ToString(summary.StackName), prefix) {
+			matchedStackNames = append(matchedStackNames, aws.ToString(summary.StackName))
+		}
+	}
+
+	for _, stackName := range matchedStackNames {
+		describeOutput, err := cfClient.DescribeStacks(ctx, &cloudformation.DescribeStacksInput{
+			StackName: aws.String(stackName),
+		})
+		if err != nil {
+			continue
+		}
+
+		if len(description.Stacks) > 0 {
+			for _, output := range describeOutput.Stacks[0].Outputs {
+				resp.Outputs[aws.ToString(output.OutputKey)] = aws.ToString(output.OutputValue)
+			}
+		}
+	}
+
+	// Return
 	respJson, err := json.Marshal(resp)
 	if err != nil {
 		return events.APIGatewayProxyResponse{

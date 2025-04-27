@@ -82,6 +82,7 @@ func DeploymentResponseFromEntity(deployment entities.Deployment) DeploymentResp
 			IncludeFriendService:          deployment.Input.IncludeFriendService,
 			IncludeRankingService:         deployment.Input.IncludeRankingService,
 			IncludeMatchSpectatingService: deployment.Input.IncludeMatchSpectatingService,
+			UseCustomization:              deployment.Input.UseCustomization,
 			MatchmakingConfiguration: MatchmakingConfigurationInput{
 				MatchSize:       deployment.Input.MatchmakingConfiguration.MatchSize,
 				RatingAlgorithm: deployment.Input.MatchmakingConfiguration.RatingAlgorithm,
@@ -112,6 +113,7 @@ func DeployInputRequestToEntity(input DeployInput) entities.DeployInput {
 		IncludeFriendService:          input.IncludeFriendService,
 		IncludeRankingService:         input.IncludeRankingService,
 		IncludeMatchSpectatingService: input.IncludeMatchSpectatingService,
+		UseCustomization:              input.UseCustomization,
 		MatchmakingConfiguration: entities.MatchmakingConfigurationInput{
 			MatchSize:       input.MatchmakingConfiguration.MatchSize,
 			RatingAlgorithm: input.MatchmakingConfiguration.RatingAlgorithm,
