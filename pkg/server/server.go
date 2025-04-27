@@ -177,7 +177,7 @@ func (s *DefaultServer) HandleMatchEnd(match Match) {
 	_, err = lambdaClient.Invoke(context.TODO(), &lambda.InvokeInput{
 		FunctionName:   aws.String(s.cfg.endGameFunctionArn),
 		Payload:        payload,
-		InvocationType: types.InvocationTypeRequestResponse,
+		InvocationType: types.InvocationTypeEvent,
 	})
 	if err != nil {
 		logging.Error("failed to invoke end game", zap.Error(err))
