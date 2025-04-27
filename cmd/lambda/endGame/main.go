@@ -167,7 +167,7 @@ func handler(ctx context.Context, event json.RawMessage) error {
 				UserId:       userRatings[i].UserId,
 				PartitionKey: "UserRatings",
 				Rating:       newRating.Mu(),
-				RD:           newRating.Sigma(),
+				Sigma:        newRating.Sigma(),
 			})
 			if err != nil {
 				return fmt.Errorf(
