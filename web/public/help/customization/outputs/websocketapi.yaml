@@ -1,0 +1,3 @@
+Exports:
+  WebsocketApiUrl: !Sub "${StackName}-WebsocketApiUrl"
+  WebsocketApiId: !Sub "${StackName}-WebsocketApiId"

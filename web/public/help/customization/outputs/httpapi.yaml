@@ -1,0 +1,3 @@
+Exports:
+  HttpApiEndpoint: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}"
+  HttpApiId: !Sub "${StackName}-HttpApiId"

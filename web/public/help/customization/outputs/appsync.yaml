@@ -1,0 +1,3 @@
+Exports:
+  AppSyncApiArn: !Sub "${StackName}-AppSyncApiArn"
+  AppSyncAccessRoleArn: !Sub "${StackName}-AppSyncAccessRoleArn"
