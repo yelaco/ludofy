@@ -70,13 +70,17 @@
         <template v-if="services.ranking">
           <div>
             <label class="block text-sm font-medium">Rating algorithm</label>
-            <select v-model="matchmaking.ratingAlgorithm" class="input">
+            <select
+              v-model="matchmaking.ratingAlgorithm"
+              class="input"
+              disabled
+            >
               <option value="glicko">Glicko</option>
-              <option value="elo">ELO</option>
+              <option value="trueskill">True Skill</option>
             </select>
           </div>
 
-          <div>
+          <div v-if="matchmaking.ratingAlgorithm == 'glicko'">
             <label class="block text-sm font-medium">Initial rating</label>
             <input
               type="number"
