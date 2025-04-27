@@ -33,14 +33,25 @@ Resources:
                 },
                 "body": json.dumps({"message": "Hello, World!"})
             }
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /helloWorld
-            Method: GET
-            ApiId:
-              Fn::ImportValue: !Sub "${StackName}-HttpApiId"
+
+  HelloWorldIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub "${StackName}-HttpApiId"
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt HelloWorldFunction.Arn
+      PayloadFormatVersion: "2.0"
+
+  HelloWorldRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub "${StackName}-HttpApiId"
+      RouteKey: GET /helloWorld
+      Target: !Sub
+        - integrations/${IntegrationId}
+        - IntegrationId: !Ref HelloWorldIntegration
 
 Outputs:
   HelloWorldEndpointUrl:
