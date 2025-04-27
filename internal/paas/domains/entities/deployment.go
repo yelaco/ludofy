@@ -17,6 +17,7 @@ type DeployInput struct {
 	IncludeFriendService          bool                          `dynamodbav:"IncludeFriendService"`
 	IncludeRankingService         bool                          `dynamodbav:"IncludeRankingService"`
 	IncludeMatchSpectatingService bool                          `dynamodbav:"IncludeMatchSpectatingService"`
+	UseCustomization              bool                          `dynamodbav:"UseCustomization"`
 	MatchmakingConfiguration      MatchmakingConfigurationInput `dynamodbav:"MatchmakingConfiguration"`
 	ServerConfiguration           ServerConfigurationInput      `dynamodbav:"ServerConfiguration"`
 }
