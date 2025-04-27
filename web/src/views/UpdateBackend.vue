@@ -428,7 +428,7 @@ onMounted(async () => {
     ranking: input.includeRankingService,
     matchSpectating: input.includeMatchSpectatingService,
   };
-  useCustomization.value = input.useCustomization || {};
+  useCustomization.value = input.useCustomization || false;
   matchmaking.value = input.matchmakingConfiguration || {};
   server.value = {
     cpu: input.serverConfiguration.initialCpu,
