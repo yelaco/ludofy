@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/chess-vn/slchess/pkg/server"
+	"github.com/yelaco/ludofy/pkg/server"
 	"github.com/notnil/chess"
 )
 

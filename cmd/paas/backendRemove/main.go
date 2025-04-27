@@ -14,8 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/batch"
 	"github.com/aws/aws-sdk-go-v2/service/batch/types"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/chess-vn/slchess/internal/paas/aws/auth"
-	"github.com/chess-vn/slchess/internal/paas/aws/storage"
+	"github.com/yelaco/ludofy/internal/paas/aws/auth"
+	"github.com/yelaco/ludofy/internal/paas/aws/storage"
 )
 
 var (

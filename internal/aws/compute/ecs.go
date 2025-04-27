@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	"github.com/chess-vn/slchess/internal/domains/dtos"
+	"github.com/yelaco/ludofy/internal/domains/dtos"
 )
 
 func (client *Client) GetServiceMetrics(

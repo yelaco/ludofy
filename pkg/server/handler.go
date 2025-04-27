@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/chess-vn/slchess/internal/domains/dtos"
-	"github.com/chess-vn/slchess/internal/domains/entities"
+	"github.com/yelaco/ludofy/internal/domains/dtos"
+	"github.com/yelaco/ludofy/internal/domains/entities"
 )
 
 type MatchHandler interface {

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chess-vn/slchess/pkg/logging"
-	"github.com/chess-vn/slchess/pkg/server"
+	"github.com/yelaco/ludofy/pkg/logging"
+	"github.com/yelaco/ludofy/pkg/server"
 	"github.com/notnil/chess"
 	"go.uber.org/zap"
 )

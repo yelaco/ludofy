@@ -11,8 +11,8 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/chess-vn/slchess/internal/aws/auth"
-	"github.com/chess-vn/slchess/internal/aws/presign"
+	"github.com/yelaco/ludofy/internal/aws/auth"
+	"github.com/yelaco/ludofy/internal/aws/presign"
 )
 
 type response struct {

@@ -1,6 +1,6 @@
 package dtos
 
-import "github.com/chess-vn/slchess/internal/domains/entities"
+import "github.com/yelaco/ludofy/internal/domains/entities"
 
 type MatchResultListResponse struct {
 	Items         []MatchResultResponse     `json:"items"`

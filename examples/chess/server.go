@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/chess-vn/slchess/internal/domains/dtos"
-	"github.com/chess-vn/slchess/internal/domains/entities"
-	"github.com/chess-vn/slchess/pkg/server"
+	"github.com/yelaco/ludofy/internal/domains/dtos"
+	"github.com/yelaco/ludofy/internal/domains/entities"
+	"github.com/yelaco/ludofy/pkg/server"
 )
 
 type Payload struct {

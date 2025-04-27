@@ -8,8 +8,8 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/chess-vn/slchess/internal/aws/storage"
-	"github.com/chess-vn/slchess/internal/domains/dtos"
+	"github.com/yelaco/ludofy/internal/aws/storage"
+	"github.com/yelaco/ludofy/internal/domains/dtos"
 )
 
 var storageClient *storage.Client

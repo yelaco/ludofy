@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/chess-vn/slchess/pkg/logging"
-	"github.com/chess-vn/slchess/pkg/server"
+	"github.com/yelaco/ludofy/pkg/logging"
+	"github.com/yelaco/ludofy/pkg/server"
 	"go.uber.org/zap"
 )
 

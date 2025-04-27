@@ -10,8 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	awsAuth "github.com/chess-vn/slchess/internal/aws/auth"
-	"github.com/chess-vn/slchess/pkg/logging"
+	awsAuth "github.com/yelaco/ludofy/internal/aws/auth"
+	"github.com/yelaco/ludofy/pkg/logging"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )

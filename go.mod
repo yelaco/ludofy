@@ -1,4 +1,4 @@
-module github.com/chess-vn/slchess
+module github.com/yelaco/ludofy
 
 go 1.24.1
 

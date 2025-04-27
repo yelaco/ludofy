@@ -10,8 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/batch"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/chess-vn/slchess/internal/paas/aws/storage"
-	"github.com/chess-vn/slchess/internal/paas/domains/dtos"
+	"github.com/yelaco/ludofy/internal/paas/aws/storage"
+	"github.com/yelaco/ludofy/internal/paas/domains/dtos"
 )
 
 var (

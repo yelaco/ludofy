@@ -1,7 +1,7 @@
 package dtos
 
 import (
-	"github.com/chess-vn/slchess/internal/domains/entities"
+	"github.com/yelaco/ludofy/internal/domains/entities"
 )
 
 type MatchSpectateResponse struct {

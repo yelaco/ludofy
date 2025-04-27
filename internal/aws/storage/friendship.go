@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/chess-vn/slchess/internal/domains/entities"
+	"github.com/yelaco/ludofy/internal/domains/entities"
 )
 
 var ErrFriendshipNotFound = fmt.Errorf("friendship not found")

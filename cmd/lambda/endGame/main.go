@@ -8,9 +8,9 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/chess-vn/slchess/internal/aws/storage"
-	"github.com/chess-vn/slchess/internal/domains/entities"
-	"github.com/chess-vn/slchess/pkg/server"
+	"github.com/yelaco/ludofy/internal/aws/storage"
+	"github.com/yelaco/ludofy/internal/domains/entities"
+	"github.com/yelaco/ludofy/pkg/server"
 )
 
 var storageClient *storage.Client
@@ -21,7 +21,6 @@ func init() {
 }
 
 func handler(ctx context.Context, event json.RawMessage) error {
-	fmt.Println(string(event))
 	var matchRecordReq server.MatchRecordRequest
 	if err := json.Unmarshal(event, &matchRecordReq); err != nil {
 		return fmt.Errorf("failed to unmarshal: %w", err)

@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/chess-vn/slchess/pkg/utils"
+	"github.com/yelaco/ludofy/pkg/utils"
 	"github.com/gorilla/websocket"
 )
 

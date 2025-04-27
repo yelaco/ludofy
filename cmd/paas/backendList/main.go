@@ -12,9 +12,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/chess-vn/slchess/internal/paas/aws/auth"
-	"github.com/chess-vn/slchess/internal/paas/aws/storage"
-	"github.com/chess-vn/slchess/internal/paas/domains/dtos"
+	"github.com/yelaco/ludofy/internal/paas/aws/auth"
+	"github.com/yelaco/ludofy/internal/paas/aws/storage"
+	"github.com/yelaco/ludofy/internal/paas/domains/dtos"
 )
 
 var storageClient *storage.Client

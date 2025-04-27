@@ -2,8 +2,8 @@ package server
 
 import (
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
-	"github.com/chess-vn/slchess/internal/aws/compute"
-	"github.com/chess-vn/slchess/internal/aws/storage"
+	"github.com/yelaco/ludofy/internal/aws/compute"
+	"github.com/yelaco/ludofy/internal/aws/storage"
 )
 
 var (

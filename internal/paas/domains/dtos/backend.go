@@ -3,7 +3,7 @@ package dtos
 import (
 	"time"
 
-	"github.com/chess-vn/slchess/internal/paas/domains/entities"
+	"github.com/yelaco/ludofy/internal/paas/domains/entities"
 )
 
 type BackendResponse struct {

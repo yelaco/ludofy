@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/chess-vn/slchess/internal/paas/domains/entities"
+	"github.com/yelaco/ludofy/internal/paas/domains/entities"
 )
 
 var ErrDeploymentNotFound = fmt.Errorf("deployment not found")

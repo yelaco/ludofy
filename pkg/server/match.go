@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/chess-vn/slchess/internal/aws/storage"
-	"github.com/chess-vn/slchess/pkg/logging"
-	"github.com/chess-vn/slchess/pkg/utils"
+	"github.com/yelaco/ludofy/internal/aws/storage"
+	"github.com/yelaco/ludofy/pkg/logging"
+	"github.com/yelaco/ludofy/pkg/utils"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )

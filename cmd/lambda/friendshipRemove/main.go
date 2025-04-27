@@ -10,9 +10,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
-	"github.com/chess-vn/slchess/internal/aws/auth"
-	"github.com/chess-vn/slchess/internal/aws/notification"
-	"github.com/chess-vn/slchess/internal/aws/storage"
+	"github.com/yelaco/ludofy/internal/aws/auth"
+	"github.com/yelaco/ludofy/internal/aws/notification"
+	"github.com/yelaco/ludofy/internal/aws/storage"
 )
 
 var (

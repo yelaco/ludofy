@@ -18,12 +18,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
-	"github.com/chess-vn/slchess/internal/aws/auth"
-	"github.com/chess-vn/slchess/internal/aws/compute"
-	"github.com/chess-vn/slchess/internal/aws/storage"
-	"github.com/chess-vn/slchess/internal/domains/dtos"
-	"github.com/chess-vn/slchess/internal/domains/entities"
-	"github.com/chess-vn/slchess/pkg/utils"
+	"github.com/yelaco/ludofy/internal/aws/auth"
+	"github.com/yelaco/ludofy/internal/aws/compute"
+	"github.com/yelaco/ludofy/internal/aws/storage"
+	"github.com/yelaco/ludofy/internal/domains/dtos"
+	"github.com/yelaco/ludofy/internal/domains/entities"
+	"github.com/yelaco/ludofy/pkg/utils"
 )
 
 var (

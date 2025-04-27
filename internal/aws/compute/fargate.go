@@ -10,8 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
-	"github.com/chess-vn/slchess/internal/domains/dtos"
-	"github.com/chess-vn/slchess/pkg/logging"
+	"github.com/yelaco/ludofy/internal/domains/dtos"
+	"github.com/yelaco/ludofy/pkg/logging"
 )
 
 var ErrNoServerRunning = fmt.Errorf("no server available")

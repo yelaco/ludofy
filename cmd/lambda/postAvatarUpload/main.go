@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/chess-vn/slchess/internal/aws/storage"
+	"github.com/yelaco/ludofy/internal/aws/storage"
 	"github.com/disintegration/imaging"
 )
 
