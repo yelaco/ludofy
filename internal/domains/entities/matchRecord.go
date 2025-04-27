@@ -12,6 +12,7 @@ type MatchRecord struct {
 
 type PlayerRecordInterface interface {
 	GetPlayerId() string
+	GetResult() float64
 }
 
 type PlayerRecord map[string]interface{}
@@ -22,4 +23,12 @@ func (pr PlayerRecord) GetPlayerId() string {
 		return playerId.(string)
 	}
 	return ""
+}
+
+func (pr PlayerRecord) GetResult() float64 {
+	result, ok := pr["Result"]
+	if ok {
+		return result.(float64)
+	}
+	return 0
 }

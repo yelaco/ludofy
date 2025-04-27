@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
@@ -107,7 +108,7 @@ func handler(ctx context.Context, event json.RawMessage) error {
 			err = storageClient.PutUserRating(ctx, newUserRating)
 			if err != nil {
 				return fmt.Errorf(
-					"failed to put player rating: [userId: %s] - %w",
+					"failed to put user rating: [userId: %s] - %w",
 					userRating.UserId,
 					err,
 				)
@@ -122,7 +123,7 @@ func handler(ctx context.Context, event json.RawMessage) error {
 				OpponentId:     newUserRatings[1-i].UserId,
 				OpponentRating: newUserRatings[1-i].Rating,
 				OpponentRD:     userRatings[1-i].Rating,
-				Result:         1.0,
+				Result:         matchRecord.Players[i].GetResult(),
 				Timestamp:      matchRecordReq.EndedAt.Format(time.RFC3339Nano),
 			}
 			err = storageClient.PutMatchResult(ctx, playerMatchResult, 24*time.Hour)
@@ -135,8 +136,13 @@ func handler(ctx context.Context, event json.RawMessage) error {
 			}
 		}
 	case "trueskill":
+		playerRecords := matchRecord.Players
+		sort.Slice(playerRecords, func(i, j int) bool {
+			return playerRecords[i].GetResult() > playerRecords[j].GetResult()
+		})
 		userRatings := make([]entities.UserRating, 0, len(matchRecord.Players))
-		for _, player := range matchRecord.Players {
+
+		for _, player := range playerRecords {
 			userRating, err := storageClient.GetUserRating(ctx, player.GetPlayerId())
 			if err != nil {
 				return fmt.Errorf(
@@ -165,7 +171,7 @@ func handler(ctx context.Context, event json.RawMessage) error {
 			})
 			if err != nil {
 				return fmt.Errorf(
-					"failed to get put user rating: %w",
+					"failed to put user rating: %w",
 					err,
 				)
 			}

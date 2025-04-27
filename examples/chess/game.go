@@ -11,7 +11,7 @@ type (
 )
 
 const (
-	WHITE_SDIE Side = true
+	WHITE_SIDE Side = true
 	BLACK_SIDE Side = false
 
 	BLACK_OUT_OF_TIME        = "BLACK_OUT_OF_TIME"
@@ -85,7 +85,7 @@ func (g *Game) DeclineDraw(side chess.Color) bool {
 }
 
 func (g *Game) OutOfTime(side Side) {
-	if side == WHITE_SDIE {
+	if side == WHITE_SIDE {
 		g.customOutcome = WHITE_OUT_OF_TIME
 	} else {
 		g.customOutcome = BLACK_OUT_OF_TIME
@@ -93,7 +93,7 @@ func (g *Game) OutOfTime(side Side) {
 }
 
 func (g *Game) DisconnectTimeout(side Side) {
-	if side == WHITE_SDIE {
+	if side == WHITE_SIDE {
 		g.customOutcome = WHITE_DISCONNECT_TIMEOUT
 	} else {
 		g.customOutcome = BLACK_DISCONNECT_TIMEOUT

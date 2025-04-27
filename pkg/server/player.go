@@ -74,3 +74,11 @@ func (p *DefaultPlayer) WriteControl(messageType int, data []byte, deadline time
 	}
 	return p.Conn.WriteControl(messageType, data, deadline)
 }
+
+func (p *DefaultPlayer) GetResult() float64 {
+	return p.Result
+}
+
+func (p *DefaultPlayer) SetResult(result float64) {
+	p.Result = result
+}
