@@ -65,13 +65,13 @@
           label="Help"
           :collapsed="collapsed"
         />
+        <SidebarLink
+          to="/settings"
+          icon="Settings"
+          label="Settings"
+          :collapsed="collapsed"
+        />
       </nav>
-      <SidebarLink
-        to="/settings"
-        icon="Settings"
-        label="Settings"
-        :collapsed="collapsed"
-      />
     </aside>
 
     <div class="flex-1 flex flex-col">
@@ -101,9 +101,7 @@
               class="flex items-center gap-2 text-gray-700 dark:text-white"
             >
               <component :is="icons.User" class="w-5 h-5" />
-              <span v-if="!collapsed" class="text-sm font-medium">{{
-                userEmail
-              }}</span>
+              <span class="text-sm font-medium">{{ userEmail }}</span>
             </button>
             <div
               v-if="showDropdown"

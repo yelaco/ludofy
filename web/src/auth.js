@@ -3,7 +3,7 @@ import { WebStorageStateStore, UserManager } from "oidc-client-ts";
 const cognitoAuthConfig = {
   authority: `https://cognito-idp.ap-southeast-2.amazonaws.com/${import.meta.env.VITE_COGNITO_USER_POOL_ID}`,
   client_id: import.meta.env.VITE_COGNITO_APP_CLIENT_ID,
-  redirect_uri: import.meta.env.VITE_REDIRECT_SIGN_IN,
+  redirect_uri: window.location.origin + "/",
   response_type: "code",
   scope: "openid email profile",
   post_logout_redirect_uri: "http://localhost:5173/",
@@ -16,7 +16,7 @@ export const userManager = new UserManager({
 
 export async function signOutRedirect() {
   const clientId = import.meta.env.VITE_COGNITO_APP_CLIENT_ID;
-  const logoutUri = import.meta.env.VITE_REDIRECT_SIGN_OUT;
+  const logoutUri = window.location.origin + "/";
   const cognitoDomain = import.meta.env.VITE_COGNITO_DOMAIN;
   window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
 }
