@@ -6,15 +6,6 @@ import (
 	"github.com/yelaco/ludofy/internal/domains/entities"
 )
 
-type PlayerResult string
-
-const (
-	WIN     PlayerResult = "WIN"
-	LOSE    PlayerResult = "LOST"
-	DRAW    PlayerResult = "DRAW"
-	UNKNOWN PlayerResult = "UNKNOWN"
-)
-
 type MatchRecordRequest struct {
 	MatchId   string         `json:"matchId"`
 	Players   []PlayerRecord `json:"players"`
@@ -55,21 +46,6 @@ func (pr PlayerRecord) ContainsPlayerId() bool {
 	return ok
 }
 
-func (pr PlayerRecord) GetResult() PlayerResult {
-	r, ok := pr["Result"]
-	if !ok {
-		return ""
-	}
-
-	result, ok := r.(PlayerResult)
-	if !ok {
-		return ""
-	}
-
-	switch result {
-	case WIN, LOSE, DRAW:
-		return result
-	default:
-		return UNKNOWN
-	}
+func (pr PlayerRecord) GetResult() interface{} {
+	return pr["Result"]
 }

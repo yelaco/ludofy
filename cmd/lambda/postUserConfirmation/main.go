@@ -11,11 +11,15 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/mafredri/go-trueskill"
 	"github.com/yelaco/ludofy/internal/aws/storage"
 	"github.com/yelaco/ludofy/internal/domains/entities"
 )
 
-var storageClient *storage.Client
+var (
+	storageClient   *storage.Client
+	ratingAlgorithm = os.Getenv("RATING_ALGORITHM")
+)
 
 func init() {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
@@ -43,14 +47,28 @@ func handler(
 		return event, fmt.Errorf("failed to put user profile: %w", err)
 	}
 
-	initialRatingStr, ok := os.LookupEnv("INITIAL_RATING")
-	if ok {
-		initialRating, _ := strconv.ParseFloat(initialRatingStr, 64)
+	switch ratingAlgorithm {
+	case "glicko":
+		initialRatingStr := os.Getenv("INITIAL_RATING")
+		initialRating, err := strconv.ParseFloat(initialRatingStr, 64)
+		if err != nil {
+			return event, fmt.Errorf("invalid initial rating: %w", err)
+		}
 		err = storageClient.PutUserRating(ctx, entities.UserRating{
 			UserId:       userId,
 			Rating:       initialRating,
 			RD:           200,
 			PartitionKey: "UserRatings",
+		})
+		if err != nil {
+			return event, fmt.Errorf("failed to put user rating: %w", err)
+		}
+	case "trueskill":
+		err = storageClient.PutUserRating(ctx, entities.UserRating{
+			UserId:       userId,
+			PartitionKey: "UserRatings",
+			Rating:       trueskill.DefaultMu,
+			Sigma:        trueskill.DefaultSigma,
 		})
 		if err != nil {
 			return event, fmt.Errorf("failed to put user rating: %w", err)

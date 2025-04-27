@@ -271,6 +271,7 @@ Resources:
           MATCH_RECORDS_TABLE_NAME:
             Fn::ImportValue: !Sub "${StackName}-MatchRecordsTableName"
 {{- if .IncludeRankingService }}
+          RATING_ALGORITHM: {{ .MatchmakingConfiguration.RatingAlgorithm }}
           MATCH_RESULTS_TABLE_NAME:
             Fn::ImportValue: !Sub "${StackName}-MatchResultsTableName"
           USER_RATINGS_TABLE_NAME:

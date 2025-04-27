@@ -4,16 +4,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	ts "github.com/mafredri/go-trueskill"
 	"github.com/yelaco/ludofy/internal/aws/storage"
 	"github.com/yelaco/ludofy/internal/domains/entities"
+	"github.com/yelaco/ludofy/internal/ranking"
 	"github.com/yelaco/ludofy/pkg/server"
 )
 
-var storageClient *storage.Client
+var (
+	storageClient   *storage.Client
+	ratingAlgorithm = os.Getenv("RATING_ALGORITHM")
+)
 
 func init() {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
@@ -27,6 +34,15 @@ func handler(ctx context.Context, event json.RawMessage) error {
 	}
 	matchRecord := server.MatchRecordRequestToEntity(matchRecordReq)
 
+	err := storageClient.DeleteActiveMatch(ctx, matchRecord.MatchId)
+	if err != nil {
+		return fmt.Errorf("failed to delete active match: %w", err)
+	}
+	err = storageClient.PutMatchRecord(ctx, matchRecord)
+	if err != nil {
+		return fmt.Errorf("failed to put match record: %w", err)
+	}
+
 	for _, player := range matchRecord.Players {
 		err := storageClient.DeleteUserMatch(ctx, player.GetPlayerId())
 		if err != nil {
@@ -38,54 +54,122 @@ func handler(ctx context.Context, event json.RawMessage) error {
 		}
 	}
 
-	err := storageClient.DeleteActiveMatch(ctx, matchRecord.MatchId)
-	if err != nil {
-		return fmt.Errorf("failed to delete active match: %w", err)
-	}
-
-	err = storageClient.PutMatchRecord(ctx, matchRecord)
-	if err != nil {
-		return fmt.Errorf("failed to put match record: %w", err)
-	}
-
-	for _, player := range matchRecordReq.Players {
-		playerRating := entities.UserRating{
-			UserId:       player.GetPlayerId(),
-			PartitionKey: "UserRatings",
-			Rating:       1200,
-			RD:           200,
-		}
-		err = storageClient.PutUserRating(ctx, playerRating)
-		if err != nil {
-			return fmt.Errorf(
-				"failed to put player rating: [userId: %s] - %w",
-				player.GetPlayerId(),
-				err,
-			)
-		}
-
-		// playerMatchResult := entities.MatchResult{
-		// 	UserId:         player.GetPlayerId(),
-		// 	MatchId:        matchRecordReq.MatchId,
-		// 	OpponentId:     matchRecordReq.Players[1-i].Id,
-		// 	OpponentRating: matchRecordReq.Players[1-i].OldRating,
-		// 	OpponentRD:     matchRecordReq.Players[1-i].OldRD,
-		// 	Result:         matchRecordReq.Result[i],
-		// 	Timestamp:      matchRecordReq.EndedAt.Format(time.RFC3339),
-		// }
-		// err = storageClient.PutMatchResult(ctx, playerMatchResult)
-		// if err != nil {
-		// 	return fmt.Errorf(
-		// 		"failed to put user match result: [userId: %s] - %w",
-		// 		player.Id,
-		// 		err,
-		// 	)
-		// }
-	}
-
 	err = storageClient.DeleteSpectatorConversation(ctx, matchRecord.MatchId)
 	if err != nil {
 		return fmt.Errorf("failed to delete spectator conversation: %w", err)
+	}
+
+	switch ratingAlgorithm {
+	case "glicko":
+		userRatings := make([]entities.UserRating, 0, len(matchRecord.Players))
+		for _, player := range matchRecord.Players {
+			userRating, err := storageClient.GetUserRating(ctx, player.GetPlayerId())
+			if err != nil {
+				return fmt.Errorf(
+					"failed to get user rating: [userId: %s] - %w",
+					player.GetPlayerId(),
+					err,
+				)
+			}
+			userRatings = append(userRatings, userRating)
+		}
+		if len(userRatings) != 2 {
+			return fmt.Errorf("expect 2 players for glicko ranking system")
+		}
+
+		newUserRatings := make([]entities.UserRating, 0, len(userRatings))
+		for i, userRating := range userRatings {
+			matchResults, _, err := storageClient.FetchMatchResults(ctx, userRating.UserId, nil, 100)
+			if err != nil {
+				return fmt.Errorf("failed to fetch match results: %w", err)
+			}
+
+			opponentRatings := make([]entities.UserRating, 0, len(matchResults))
+			results := make([]float64, len(matchResults)+1)
+			for i, matchResult := range matchResults {
+				opponentRatings = append(opponentRatings, entities.UserRating{
+					UserId: matchResult.OpponentId,
+					Rating: matchResult.OpponentRating,
+					RD:     matchResult.OpponentRD,
+				})
+
+				results[i] = matchResult.Result
+			}
+			opponentRatings = append(opponentRatings, userRatings[1-i])
+
+			newRating, newRD := ranking.CalculateNewRating(userRating, opponentRatings, results)
+			newUserRating := entities.UserRating{
+				UserId:       userRating.UserId,
+				PartitionKey: "UserRatings",
+				Rating:       newRating,
+				RD:           newRD,
+			}
+			err = storageClient.PutUserRating(ctx, newUserRating)
+			if err != nil {
+				return fmt.Errorf(
+					"failed to put player rating: [userId: %s] - %w",
+					userRating.UserId,
+					err,
+				)
+			}
+			newUserRatings = append(newUserRatings, newUserRating)
+		}
+
+		for i, userRating := range newUserRatings {
+			playerMatchResult := entities.MatchResult{
+				UserId:         userRating.UserId,
+				MatchId:        matchRecordReq.MatchId,
+				OpponentId:     newUserRatings[1-i].UserId,
+				OpponentRating: newUserRatings[1-i].Rating,
+				OpponentRD:     userRatings[1-i].Rating,
+				Result:         1.0,
+				Timestamp:      matchRecordReq.EndedAt.Format(time.RFC3339Nano),
+			}
+			err = storageClient.PutMatchResult(ctx, playerMatchResult, 24*time.Hour)
+			if err != nil {
+				return fmt.Errorf(
+					"failed to put user match result: [userId: %s] - %w",
+					userRating.UserId,
+					err,
+				)
+			}
+		}
+	case "trueskill":
+		userRatings := make([]entities.UserRating, 0, len(matchRecord.Players))
+		for _, player := range matchRecord.Players {
+			userRating, err := storageClient.GetUserRating(ctx, player.GetPlayerId())
+			if err != nil {
+				return fmt.Errorf(
+					"failed to get user rating: [userId: %s] - %w",
+					player.GetPlayerId(),
+					err,
+				)
+			}
+			userRatings = append(userRatings, userRating)
+		}
+
+		tsCfg := ts.New(ts.DrawProbabilityZero())
+		players := make([]ts.Player, 0, len(userRatings))
+		for _, userRating := range userRatings {
+			players = append(players, ts.NewPlayer(userRating.Rating, userRating.Sigma))
+		}
+		draw := false
+		newRatings, _ := tsCfg.AdjustSkills(players, draw)
+
+		for i, newRating := range newRatings {
+			err = storageClient.PutUserRating(ctx, entities.UserRating{
+				UserId:       userRatings[i].UserId,
+				PartitionKey: "UserRatings",
+				Rating:       newRating.Mu(),
+				RD:           newRating.Sigma(),
+			})
+			if err != nil {
+				return fmt.Errorf(
+					"failed to get put user rating: %w",
+					err,
+				)
+			}
+		}
 	}
 
 	return nil

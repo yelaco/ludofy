@@ -81,6 +81,7 @@ Resources:
           USER_PROFILES_TABLE_NAME:
             Fn::ImportValue: !Sub "${StackName}-UserProfilesTableName"
 {{- if .IncludeRankingService }}
+          RATING_ALGORITHM: {{ .MatchmakingConfiguration.RatingAlgorithm }}
           USER_RATINGS_TABLE_NAME:
             Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
           INITIAL_RATING: {{ .MatchmakingConfiguration.InitialRating }}

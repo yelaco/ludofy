@@ -3,6 +3,8 @@ package storage
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -45,10 +47,14 @@ func (client *Client) FetchMatchResults(
 func (client *Client) PutMatchResult(
 	ctx context.Context,
 	matchResult entities.MatchResult,
+	ttl time.Duration,
 ) error {
 	av, err := attributevalue.MarshalMap(matchResult)
 	if err != nil {
 		return fmt.Errorf("failed to marshal match result map: %w", err)
+	}
+	av["TTL"] = &types.AttributeValueMemberN{
+		Value: strconv.FormatInt(time.Now().Add(ttl).Unix(), 10),
 	}
 	_, err = client.dynamodb.PutItem(ctx, &dynamodb.PutItemInput{
 		TableName: client.cfg.MatchResultsTableName,
