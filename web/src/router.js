@@ -9,7 +9,7 @@ import Deployments from "./views/Deployments.vue";
 import Backends from "./views/Backends.vue";
 import Settings from "./views/Settings.vue";
 import Help from "./views/Help.vue";
-import HelpCustomization from "@/views/help/Customization.vue";
+import HelpCustomization from "./views/help/Customization.vue";
 
 const routes = [
   {
