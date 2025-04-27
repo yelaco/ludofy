@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/notnil/chess"
 	"github.com/yelaco/ludofy/pkg/logging"
 	"github.com/yelaco/ludofy/pkg/server"
-	"github.com/notnil/chess"
 	"go.uber.org/zap"
 )
 
@@ -140,7 +140,7 @@ func (m *Match) currentPly() int {
 func (m *Match) getCurrentTurnPlayer() *Player {
 	side := BLACK_SIDE
 	if m.game.Position().Turn() == chess.White {
-		side = WHITE_SDIE
+		side = WHITE_SIDE
 	}
 	for _, player := range m.GetPlayers() {
 		if player.(*Player).Side == side {
@@ -254,7 +254,7 @@ type MyMatchHandler struct {
 func (h *MyMatchHandler) OnPlayerJoin(playerInterface server.Player) (bool, error) {
 	match := h.GetMatch().(*Match)
 	player := playerInterface.(*Player)
-	if player.GetStatus() == INIT && player.Side == WHITE_SDIE {
+	if player.GetStatus() == INIT && player.Side == WHITE_SIDE {
 		match.StartedAt = time.Now()
 		player.TurnStartedAt = match.StartedAt
 		match.setTimer(match.cfg.MatchDuration)
@@ -438,6 +438,25 @@ func (h *MyMatchHandler) OnMatchSave() error {
 
 func (h *MyMatchHandler) OnMatchEnd() error {
 	match := h.GetMatch().(*Match)
+	for _, p := range match.GetPlayers() {
+		player := p.(*Player)
+		switch match.game.Outcome() {
+		case chess.WhiteWon:
+			if player.Side == WHITE_SIDE {
+				player.SetResult(1)
+			} else {
+				player.SetResult(0)
+			}
+		case chess.BlackWon:
+			if player.Side == BLACK_SIDE {
+				player.SetResult(1)
+			} else {
+				player.SetResult(0)
+			}
+		case chess.Draw:
+			player.SetResult(0.5)
+		}
+	}
 	match.skipTimer()
 	match.checkTimeout()
 	return nil

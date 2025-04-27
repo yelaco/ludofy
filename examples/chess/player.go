@@ -3,8 +3,8 @@ package main
 import (
 	"time"
 
-	"github.com/yelaco/ludofy/pkg/server"
 	"github.com/notnil/chess"
+	"github.com/yelaco/ludofy/pkg/server"
 )
 
 const (
@@ -31,7 +31,7 @@ func (p *Player) UpdateClock(
 }
 
 func (p *Player) Color() chess.Color {
-	if p.Side == WHITE_SDIE {
+	if p.Side == WHITE_SIDE {
 		return chess.White
 	}
 	return chess.Black

@@ -5,8 +5,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/yelaco/ludofy/pkg/utils"
 	"github.com/gorilla/websocket"
+	"github.com/yelaco/ludofy/pkg/utils"
 )
 
 // Interfaces
@@ -44,6 +44,8 @@ type Player interface {
 	GetStatus() string
 	WriteJson(msg interface{}) error
 	WriteControl(messageType int, data []byte, deadline time.Time) error
+	GetResult() float64
+	SetResult(result float64)
 }
 
 type Move interface {
@@ -69,6 +71,7 @@ type DefaultPlayer struct {
 	Conn    *websocket.Conn
 	MatchId string
 	Status  Status
+	Result  float64
 
 	mu *sync.Mutex
 }

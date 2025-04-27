@@ -123,6 +123,7 @@ func (h *MyServerHandler) OnHandleMatchEnd(
 	for _, player := range match.GetPlayers() {
 		playerRecord := server.PlayerRecord{
 			"PlayerId": player.GetId(),
+			"Result":   player.GetResult(),
 		}
 		record.Players = append(record.Players, playerRecord)
 	}

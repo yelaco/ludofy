@@ -46,6 +46,10 @@ func (pr PlayerRecord) ContainsPlayerId() bool {
 	return ok
 }
 
-func (pr PlayerRecord) GetResult() interface{} {
-	return pr["Result"]
+func (pr PlayerRecord) GetResult() float64 {
+	result, ok := pr["Result"]
+	if ok {
+		return result.(float64)
+	}
+	return 0
 }
