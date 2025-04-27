@@ -2,3 +2,4 @@
 configs/aws/*
 configs/e2e/*
 configs/stofinet/*
+.vercel
