@@ -101,6 +101,13 @@ Resources:
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
+    DependsOn:
+      - StorageStack
+      - AuthStack
+      - AppSyncStack
+      - ComputeStack
+      - WebsocketApiStack
+      - HttpApiStack
 {{- end }}
 
 Outputs:
