@@ -86,16 +86,16 @@ func handler(ctx context.Context, event json.RawMessage) error {
 				return fmt.Errorf("failed to fetch match results: %w", err)
 			}
 
-			opponentRatings := make([]entities.UserRating, 0, len(matchResults))
-			results := make([]float64, len(matchResults)+1)
-			for i, matchResult := range matchResults {
+			opponentRatings := make([]entities.UserRating, 0, len(matchResults)+1)
+			results := make([]float64, 0, len(matchResults)+1)
+			for _, matchResult := range matchResults {
 				opponentRatings = append(opponentRatings, entities.UserRating{
 					UserId: matchResult.OpponentId,
 					Rating: matchResult.OpponentRating,
 					RD:     matchResult.OpponentRD,
 				})
 
-				results[i] = matchResult.Result
+				results = append(results, matchResult.Result)
 			}
 			opponentRatings = append(opponentRatings, opponentRating)
 			results = append(results, matchRecordReq.Players[i].GetResult())
