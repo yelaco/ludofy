@@ -98,6 +98,7 @@ func handler(ctx context.Context, event json.RawMessage) error {
 				results[i] = matchResult.Result
 			}
 			opponentRatings = append(opponentRatings, opponentRating)
+			results = append(results, matchRecordReq.Players[i].GetResult())
 
 			newRating, newRD := ranking.CalculateNewRating(userRating, opponentRatings, results)
 			newUserRating := entities.UserRating{
