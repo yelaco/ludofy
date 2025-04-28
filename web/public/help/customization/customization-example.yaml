@@ -57,7 +57,10 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt HelloWorldFunction.Arn
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${StackName}-HttpApiId/*/*/helloWorld
+      SourceArn: !Sub
+        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApiId}/*/*/helloWorld
+        - HttpApiId:
+            Fn::ImportValue: !Sub "${StackName}-HttpApiId"
 
 Outputs:
   HelloWorldEndpointUrl:
