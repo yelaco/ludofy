@@ -53,7 +53,7 @@ var (
 )
 
 func init() {
-	cfg, _ := config.LoadDefaultConfig(context.Background())
+	cfg, _ := config.LoadDefaultConfig(context.TODO())
 	storageClient = storage.NewClient(
 		dynamodb.NewFromConfig(cfg),
 		s3.NewFromConfig(cfg),
@@ -98,13 +98,13 @@ func handler(
 		}, nil
 	}
 
-	pending, err := storageClient.CheckPendingDeployment(ctx, userId)
+	inProgress, err := storageClient.CheckInProgressDeployment(ctx, backendId)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-		}, fmt.Errorf("failed to check pending deployment: %w", err)
+		}, fmt.Errorf("failed to check in-progress deployment: %w", err)
 	}
-	if pending {
+	if inProgress {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusConflict,
 			Body:       "Another deployment is ongoing",

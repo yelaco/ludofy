@@ -14,26 +14,29 @@ import (
 
 var ErrDeploymentNotFound = fmt.Errorf("deployment not found")
 
-func (client *Client) CheckPendingDeployment(
+func (client *Client) CheckInProgressDeployment(
 	ctx context.Context,
-	userId string,
+	backendId string,
 ) (
 	bool,
 	error,
 ) {
 	input := &dynamodb.QueryInput{
 		TableName:              client.cfg.DeploymentsTableName,
-		IndexName:              aws.String("UserIndex"),
-		KeyConditionExpression: aws.String("UserId = :userId"),
-		FilterExpression:       aws.String("#stat = :stat"),
+		IndexName:              aws.String("BackendIndex"),
+		KeyConditionExpression: aws.String("BackendId = :backendId"),
+		FilterExpression:       aws.String("#stat = :pending OR #stat = :deploying"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":userId": &types.AttributeValueMemberS{Value: userId},
-			":stat":   &types.AttributeValueMemberS{Value: "pending"},
+			":backendId": &types.AttributeValueMemberS{Value: backendId},
+			":pending":   &types.AttributeValueMemberS{Value: "pending"},
+			":deploying": &types.AttributeValueMemberS{Value: "deploying"},
 		},
 		ExpressionAttributeNames: map[string]string{
 			"#stat": "Status",
 		},
 		ProjectionExpression: aws.String("Id"),
+		ScanIndexForward:     aws.Bool(false),
+		Limit:                aws.Int32(3),
 	}
 	output, err := client.dynamodb.Query(ctx, input)
 	if err != nil {
