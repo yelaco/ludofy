@@ -42,7 +42,7 @@ Resources:
           error,
         ) {
             return events.APIGatewayProxyResponse{
-        	      StatusCode: http.StatusOK,
+                StatusCode: http.StatusOK,
                 Body:       "Hello World!",
           	}, nil
         }
