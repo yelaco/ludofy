@@ -6,7 +6,6 @@ on:
   push:
     branches:
       - frontend
-      - main
 jobs:
   Deploy-Production:
     runs-on: ubuntu-latest
