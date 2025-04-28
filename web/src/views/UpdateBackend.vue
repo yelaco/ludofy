@@ -411,7 +411,10 @@ async function submit() {
     if (error.response?.status === 302) {
       showToast("Duplicate stack name. Please use another.", "error");
     } else if (error.response?.status === 409) {
-      showToast("Pending deployment exists. Try again later.", "error");
+      showToast(
+        "In-progress deployment for this backend exists. Try again later.",
+        "error",
+      );
     } else {
       showToast("Failed to deploy backend. Please try again.", "error");
     }
