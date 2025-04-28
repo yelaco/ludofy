@@ -26,6 +26,7 @@ Resources:
       Runtime: provided.al2023
       InlineCode: |
         package main
+
         import (
           "context"
           "net/http"
