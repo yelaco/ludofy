@@ -21,7 +21,7 @@ Resources:
     Metadata:
       BuildMethod: nodejs20.x
     Properties:
-      FunctionName: HelloWorldFunction
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-HelloWorldFunction"
       Runtime: nodejs20.x
       Handler: index.handler
       InlineCode: |
