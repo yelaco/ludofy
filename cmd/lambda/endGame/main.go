@@ -80,7 +80,8 @@ func handler(ctx context.Context, event json.RawMessage) error {
 
 		newUserRatings := make([]entities.UserRating, 0, len(userRatings))
 		for i, userRating := range userRatings {
-			matchResults, _, err := storageClient.FetchMatchResults(ctx, userRating.UserId, nil, 100)
+			opponentRating := userRatings[1-i]
+			matchResults, _, err := storageClient.FetchMatchResults(ctx, opponentRating.UserId, nil, 100)
 			if err != nil {
 				return fmt.Errorf("failed to fetch match results: %w", err)
 			}
@@ -96,7 +97,7 @@ func handler(ctx context.Context, event json.RawMessage) error {
 
 				results[i] = matchResult.Result
 			}
-			opponentRatings = append(opponentRatings, userRatings[1-i])
+			opponentRatings = append(opponentRatings, opponentRating)
 
 			newRating, newRD := ranking.CalculateNewRating(userRating, opponentRatings, results)
 			newUserRating := entities.UserRating{
