@@ -18,21 +18,39 @@ Parameters:
 Resources:
   HelloWorldFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
     Properties:
       FunctionName: HelloWorldFunction
-      Runtime: python3.12
-      Handler: index.handler
+      Handler: bootstrap
+      Runtime: provided.al2023
       InlineCode: |
-        import json
+        package main
 
-        def handler(event, context):
-            return {
-                "statusCode": 200,
-                "headers": {
-                "Content-Type": "application/json"
-                },
-                "body": json.dumps({"message": "Hello, World!"})
-            }
+        import (
+          "context"
+          "net/http"
+
+          "github.com/aws/aws-lambda-go/events"
+          "github.com/aws/aws-lambda-go/lambda"
+        )
+
+        func handler(
+        	ctx context.Context,
+        	event events.APIGatewayProxyRequest,
+        ) (
+        	events.APIGatewayProxyResponse,
+          error,
+        ) {
+            return events.APIGatewayProxyResponse{
+                StatusCode: http.StatusOK,
+                Body:       "Hello World!",
+          	}, nil
+        }
+
+        func main() {
+            lambda.Start(handler)
+        }
 
   HelloWorldIntegration:
     Type: AWS::ApiGatewayV2::Integration
