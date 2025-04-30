@@ -85,6 +85,7 @@ Resources:
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
+
   CustomizationStack:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -139,7 +140,6 @@ Outputs:
   ActiveMatchListEndpointUrl:
     Description: "Endpoint URL for get a list of active matches"
     Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/activeMatches?limit=5&startKey=<START-KEY>"
-
 
   AvatarUploadEndpointUrl:
     Description: "Endpoint URL for uploading avatar"
