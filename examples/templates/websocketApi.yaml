@@ -68,12 +68,16 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue ConnectionsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ConnectionsTableName"
       Environment:
         Variables:
-          CONNECTIONS_TABLE: !ImportValue ConnectionsTableName
-          COGNITO_USER_POOL_ID: !ImportValue UserPoolId
-          CONNECTIONS_TABLE_NAME: !ImportValue ConnectionsTableName
+          CONNECTIONS_TABLE:
+            Fn::ImportValue: !Sub "${StackName}-ConnectionsTableName"
+          COGNITO_USER_POOL_ID:
+            Fn::ImportValue: !Sub "${StackName}-UserPoolId"
+          CONNECTIONS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ConnectionsTableName"
 
   ConnectFunctionPermission:
     Type: AWS::Lambda::Permission
@@ -110,10 +114,12 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue ConnectionsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ConnectionsTableName"
       Environment:
         Variables:
-          CONNECTIONS_TABLE_NAME: !ImportValue ConnectionsTableName
+          CONNECTIONS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ConnectionsTableName"
 
   DisconnectFunctionPermission:
     Type: AWS::Lambda::Permission
@@ -150,11 +156,14 @@ Resources:
       Runtime: provided.al2023
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue ConnectionsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ConnectionsTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserMatchesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue ActiveMatchesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
         - Statement:
             - Effect: Allow
               Action:
@@ -164,9 +173,12 @@ Resources:
         Variables:
           WEBSOCKET_API_ID: !Ref WebsocketApi
           WEBSOCKET_API_STAGE: !Ref DeploymentStage
-          CONNECTIONS_TABLE_NAME: !ImportValue ConnectionsTableName
-          USER_MATCHES_TABLE_NAME: !ImportValue UserMatchesTableName
-          ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
+          CONNECTIONS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ConnectionsTableName"
+          USER_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
+          ACTIVE_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
 
   QueuingFunctionPermission:
     Type: AWS::Lambda::Permission
@@ -180,7 +192,7 @@ Resources:
   ApiGatewayRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: ApiGatewayRole
+      RoleName: !Sub "${StackName}-ApiGatewayRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -202,9 +214,9 @@ Outputs:
   WebsocketApiUrl:
     Value: !Sub "wss://${WebsocketApi}.execute-api.${AWS::Region}.amazonaws.com/${DeploymentStage}"
     Export:
-      Name: WebsocketApiUrl
+      Name: !Sub "${StackName}-WebsocketApiUrl"
 
   WebsocketApiId:
     Value: !Ref WebsocketApi
     Export:
-      Name: WebsocketApiId
+      Name: !Sub "${StackName}-WebsocketApiId"

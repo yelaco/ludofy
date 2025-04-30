@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Compute Stack for Slchess
+Description: Compute Stack
 
 Globals:
   Function:
@@ -32,8 +32,8 @@ Resources:
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
-      Cpu: "256"
-      Memory: "512"
+      Cpu: 256
+      Memory: 512
       ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
       TaskRoleArn: !GetAtt ServerRole.Arn
       ContainerDefinitions:
@@ -54,9 +54,29 @@ Resources:
               Value: !Ref AWS::Region
             - Name: ECS_ENABLE_CONTAINER_METADATA
               Value: "true"
-          Secrets:
             - Name: MAX_MATCHES
-              ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${StackName}/server/max-matches"
+              Value: 100
+            - Name: SERVER_PROTECTION_TIMEOUT
+              Value: "10m"
+            - Name: COGNITO_USER_POOL_ID
+              Value:
+                Fn::ImportValue: !Sub "${StackName}-UserPoolId"
+            - Name: APPSYNC_HTTP_URL
+              Value:
+                Fn::ImportValue: !Sub "${StackName}-AppSyncGraphQLApiUrl"
+            - Name: APPSYNC_ACCESS_ROLE_ARN
+              Value:
+                Fn::ImportValue: !Sub "${StackName}-AppSyncAccessRoleArn"
+            - Name: ACTIVE_MATCHES_TABLE_NAME
+              Value:
+                Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
+            - Name: MATCH_STATES_TABLE_NAME
+              Value:
+                Fn::ImportValue: !Sub "${StackName}-MatchStatesTableName"
+            - Name: ABORT_GAME_FUNCTION_ARN
+              Value: !GetAtt AbortGameFunction.Arn
+            - Name: END_GAME_FUNCTION_ARN
+              Value: !GetAtt EndGameFunction.Arn
 
   ### ECS Service ###
   ServerService:
@@ -81,7 +101,7 @@ Resources:
   ServerRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: ServerRole
+      RoleName: !Sub "${StackName}-ServerRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -105,7 +125,8 @@ Resources:
                 Action: appsync:GraphQL
                 Resource: !Sub
                   - "${ApiArn}/*"
-                  - ApiArn: !ImportValue AppSyncApiArn
+                  - ApiArn:
+                      Fn::ImportValue: !Sub "${StackName}-AppSyncApiArn"
         - PolicyName: DynamoDBAccessPolicy
           PolicyDocument:
             Version: "2012-10-17"
@@ -117,13 +138,14 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                 Resource:
-                  - !ImportValue UserMatchesTableArn
-                  - !ImportValue ActiveMatchesTableArn
-                  - !ImportValue SpectatorConversationsTableArn
-                  - !ImportValue MatchStatesTableArn
+                  - Fn::ImportValue: !Sub "${StackName}-UserMatchesTableArn"
+                  - Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableArn"
+                  - Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableArn"
+                  - Fn::ImportValue: !Sub "${StackName}-MatchStatesTableArn"
                   - !Sub
                     - "${MatchStatesTableArn}/index/MatchIndex"
-                    - MatchStatesTableArn: !ImportValue MatchStatesTableArn
+                    - MatchStatesTableArn:
+                        Fn::ImportValue: !Sub "${StackName}-MatchStatesTableArn"
         - PolicyName: ECSTaskProtectionPolicy
           PolicyDocument:
             Version: "2012-10-17"
@@ -137,6 +159,7 @@ Resources:
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub "${StackName}-ECSTaskExecutionRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -151,6 +174,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  - secretsmanager:GetSecretValue
                   - ecr:GetDownloadUrlForLayer
                   - ecr:BatchGetImage
                   - ecr:GetAuthorizationToken
@@ -205,26 +229,40 @@ Resources:
       Timeout: 10
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserMatchesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue ActiveMatchesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue MatchRecordsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-MatchRecordsTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue MatchResultsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-MatchResultsTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserRatingsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue SpectatorConversationsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
       Environment:
         Variables:
-          USER_MATCHES_TABLE_NAME: !ImportValue UserMatchesTableName
-          ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
-          MATCH_STATES_TABLE_NAME: !ImportValue MatchStatesTableName
-          MATCH_RECORDS_TABLE_NAME: !ImportValue MatchRecordsTableName
-          MATCH_RESULTS_TABLE_NAME: !ImportValue MatchResultsTableName
-          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
-          SPECTATOR_CONVERSATIONS_TABLE_NAME: !ImportValue SpectatorConversationsTableName
+          USER_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
+          ACTIVE_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
+          MATCH_STATES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchStatesTableName"
+          MATCH_RECORDS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchRecordsTableName"
+          RATING_ALGORITHM: glicko
+          MATCH_RESULTS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-MatchResultsTableName"
+          USER_RATINGS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
+          SPECTATOR_CONVERSATIONS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
 
   AbortGameFunction:
     Type: AWS::Serverless::Function
@@ -238,29 +276,30 @@ Resources:
       Timeout: 10
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserMatchesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue ActiveMatchesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue SpectatorConversationsTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
       Environment:
         Variables:
-          USER_MATCHES_TABLE_NAME: !ImportValue UserMatchesTableName
-          ACTIVE_MATCHES_TABLE_NAME: !ImportValue ActiveMatchesTableName
-          SPECTATOR_CONVERSATIONS_TABLE_NAME: !ImportValue SpectatorConversationsTableName
+          USER_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserMatchesTableName"
+          ACTIVE_MATCHES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-ActiveMatchesTableName"
+          SPECTATOR_CONVERSATIONS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-SpectatorConversationsTableName"
 
 Outputs:
   ServerClusterName:
     Value: !Ref ServerCluster
     Export:
-      Name: ServerClusterName
+      Name: !Sub "${StackName}-ServerClusterName"
 
   ServerServiceName:
     Value: !GetAtt ServerService.Name
     Export:
-      Name: ServerServiceName
-
-  ServerDefinitionArn:
-    Value: !Ref ServerDefinition
-    Export:
-      Name: ServerDefinitionArn
+      Name: !Sub "${StackName}-ServerServiceName"

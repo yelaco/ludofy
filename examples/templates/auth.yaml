@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Authentication Stack for Slchess
+Description: Authentication Stack
 
 Globals:
   Function:
@@ -69,16 +69,19 @@ Resources:
       Policies:
         - AWSLambdaBasicExecutionRole
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserProfilesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserProfilesTableName"
         - DynamoDBCrudPolicy:
-            TableName: !ImportValue UserRatingsTableName
-        - DynamoDBCrudPolicy:
-            TableName: !ImportValue PuzzleProfilesTableName
+            TableName:
+              Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
       Environment:
         Variables:
-          USER_PROFILES_TABLE_NAME: !ImportValue UserProfilesTableName
-          USER_RATINGS_TABLE_NAME: !ImportValue UserRatingsTableName
-          PUZZLE_PROFILES_TABLE_NAME: !ImportValue PuzzleProfilesTableName
+          USER_PROFILES_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserProfilesTableName"
+          RATING_ALGORITHM: glicko
+          USER_RATINGS_TABLE_NAME:
+            Fn::ImportValue: !Sub "${StackName}-UserRatingsTableName"
+          INITIAL_RATING: 400
 
   PostUserConfirmationPermission:
     Type: AWS::Lambda::Permission
@@ -92,9 +95,9 @@ Outputs:
   UserPoolId:
     Value: !Ref UserPool
     Export:
-      Name: UserPoolId
+      Name: !Sub "${StackName}-UserPoolId"
 
   UserPoolClientId:
     Value: !Ref UserPoolClient
     Export:
-      Name: UserPoolClientId
+      Name: !Sub "${StackName}-UserPoolClientId"

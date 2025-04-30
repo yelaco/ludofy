@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
-Description: Root Stack for Slchess Backend
+Description: Root Stack
 
 Parameters:
   ServerImageUri:
@@ -52,14 +52,6 @@ Resources:
       - AuthStack
       - AppSyncStack
 
-  AnalysisStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: ./templates/analysis.yaml
-      Parameters:
-        StackName: !Ref AWS::StackName
-        DeploymentStage: !Ref DeploymentStage
-
   WebsocketApiStack:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -71,7 +63,6 @@ Resources:
       - StorageStack
       - AuthStack
       - ComputeStack
-      - AnalysisStack
 
   HttpApiStack:
     Type: AWS::CloudFormation::Stack
@@ -94,6 +85,20 @@ Resources:
       Parameters:
         StackName: !Ref AWS::StackName
         DeploymentStage: !Ref DeploymentStage
+  CustomizationStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./templates/customization.yaml
+      Parameters:
+        StackName: !Ref AWS::StackName
+        DeploymentStage: !Ref DeploymentStage
+    DependsOn:
+      - StorageStack
+      - AuthStack
+      - AppSyncStack
+      - ComputeStack
+      - WebsocketApiStack
+      - HttpApiStack
 
 Outputs:
   AppSyncGraphQLApiUrl:
@@ -119,10 +124,13 @@ Outputs:
   MatchRecordGetEndpointUrl:
     Description: "Endpoint URL for get a single match record"
     Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/match/{id}"
-
   MatchResultListEndpointUrl:
     Description: "Endpoint URL for get a list of match results"
     Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/matchResults?limit=5&startKey=<START-KEY>"
+
+  UserRatingListEndpointUrl:
+    Description: "Endpoint URL for get a list of user ratings"
+    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/userRatings?limit=5&startKey=<START-KEY>"
 
   MatchStateListEndpointUrl:
     Description: "Endpoint URL for get a list of match results"
@@ -132,9 +140,6 @@ Outputs:
     Description: "Endpoint URL for get a list of active matches"
     Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/activeMatches?limit=5&startKey=<START-KEY>"
 
-  UserRatingListEndpointUrl:
-    Description: "Endpoint URL for get a list of user ratings"
-    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/userRatings?limit=5&startKey=<START-KEY>"
 
   AvatarUploadEndpointUrl:
     Description: "Endpoint URL for uploading avatar"
@@ -143,11 +148,9 @@ Outputs:
   MatchRestoreEndpointUrl:
     Description: "Endpoint URL for restoring a match"
     Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/match/{id}/restore"
-
   MatchSpectateEndpointUrl:
     Description: "Endpoint URL for spectating a match"
     Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/match/{id}/spectate"
-
   FriendshipGetEndpointUrl:
     Description: "Endpoint URL for getting a friendship information"
     Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/friend/{id}"
@@ -168,10 +171,6 @@ Outputs:
     Description: "Endpoint URL for respond to a friendship request"
     Value: !Sub "POST ${HttpApiStack.Outputs.HttpApiEndpoint}/friend/{id}/respond"
 
-  EvaluationWorkAcquireEndpointUrl:
-    Description: "Endpoint URL for acquiring evaluation work"
-    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/stofinet/acquire"
-
-  EvaluationWorkSubmitEndpointUrl:
-    Description: "Endpoint URL for submit evaluation work"
-    Value: !Sub "POST ${HttpApiStack.Outputs.HttpApiEndpoint}/stofinet/submit"
+  MetricsGetEndpointUrl:
+    Description: "Endpoint URL for getting backend metrics"
+    Value: !Sub "GET ${HttpApiStack.Outputs.HttpApiEndpoint}/metrics"

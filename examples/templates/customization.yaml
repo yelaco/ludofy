@@ -18,29 +18,49 @@ Parameters:
 Resources:
   HelloWorldFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: nodejs20.x
     Properties:
-      FunctionName: HelloWorldFunction
-      Runtime: python3.12
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-HelloWorldFunction"
+      Runtime: nodejs20.x
       Handler: index.handler
       InlineCode: |
-        import json
+        exports.handler = async (event) => {
+          return {
+            statusCode: 200,
+            body: "Hello World!",
+          };
+        };
 
-        def handler(event, context):
-            return {
-                "statusCode": 200,
-                "headers": {
-                "Content-Type": "application/json"
-                },
-                "body": json.dumps({"message": "Hello, World!"})
-            }
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /helloWorld
-            Method: GET
-            ApiId:
-              Fn::ImportValue: !Sub "${StackName}-HttpApiId"
+  HelloWorldIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub "${StackName}-HttpApiId"
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HelloWorldFunction.Arn}/invocations
+      PayloadFormatVersion: "2.0"
+
+  HelloWorldRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub "${StackName}-HttpApiId"
+      RouteKey: GET /helloWorld
+      Target: !Sub
+        - integrations/${IntegrationId}
+        - IntegrationId: !Ref HelloWorldIntegration
+
+  HelloWorldLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt HelloWorldFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApiId}/*/*/helloWorld
+        - HttpApiId:
+            Fn::ImportValue: !Sub "${StackName}-HttpApiId"
 
 Outputs:
   HelloWorldEndpointUrl:

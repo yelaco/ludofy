@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Storage Stack for Slchess
+Description: Storage Stack
 
 Globals:
   Function:
@@ -17,23 +17,6 @@ Parameters:
     Default: dev
 
 Resources:
-  ### S3 ###
-  Puzzles:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub "${StackName}-${DeploymentStage}-puzzles"
-      CorsConfiguration:
-        CorsRules:
-          - AllowedOrigins:
-              - "*"
-            AllowedMethods:
-              - GET
-              - PUT
-              - POST
-              - DELETE
-            AllowedHeaders:
-              - "*"
-
   Images:
     Type: AWS::S3::Bucket
     Properties:
@@ -116,6 +99,7 @@ Resources:
   ApplyNotificationFunctionRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub "${StackName}-ApplyNotificationFunctionRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -192,19 +176,6 @@ Resources:
         - AttributeName: UserId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
-
-  PuzzleProfiles:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub "${StackName}-${DeploymentStage}-PuzzleProfiles"
-      AttributeDefinitions:
-        - AttributeName: UserId
-          AttributeType: S
-      KeySchema:
-        - AttributeName: UserId
-          KeyType: HASH
-      BillingMode: PAY_PER_REQUEST
-
   UserRatings:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -228,6 +199,25 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  MatchResults:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${StackName}-${DeploymentStage}-MatchResults"
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+        - AttributeName: Timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+        - AttributeName: Timestamp
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: TTL
+        Enabled: true
       BillingMode: PAY_PER_REQUEST
 
   UserMatches:
@@ -288,8 +278,8 @@ Resources:
           AttributeType: S
         - AttributeName: MatchId
           AttributeType: S
-        - AttributeName: Ply
-          AttributeType: N
+        - AttributeName: Timestamp
+          AttributeType: S
       KeySchema:
         - AttributeName: Id
           KeyType: HASH
@@ -298,7 +288,7 @@ Resources:
           KeySchema:
             - AttributeName: MatchId
               KeyType: HASH
-            - AttributeName: Ply
+            - AttributeName: Timestamp
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
@@ -315,26 +305,6 @@ Resources:
         - AttributeName: MatchId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
-
-  MatchResults:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub "${StackName}-${DeploymentStage}-MatchResults"
-      AttributeDefinitions:
-        - AttributeName: UserId
-          AttributeType: S
-        - AttributeName: Timestamp
-          AttributeType: S
-      KeySchema:
-        - AttributeName: UserId
-          KeyType: HASH
-        - AttributeName: Timestamp
-          KeyType: RANGE
-      TimeToLiveSpecification:
-        AttributeName: TTL
-        Enabled: true
-      BillingMode: PAY_PER_REQUEST
-
   Messages:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -359,7 +329,6 @@ Resources:
           Projection:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
-
   SpectatorConversations:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -371,7 +340,6 @@ Resources:
         - AttributeName: MatchId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
-
   Friendships:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -420,21 +388,6 @@ Resources:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
-  Evaluations:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub "${StackName}-${DeploymentStage}-Evaluations"
-      AttributeDefinitions:
-        - AttributeName: Fen
-          AttributeType: S
-      KeySchema:
-        - AttributeName: Fen
-          KeyType: HASH
-      TimeToLiveSpecification:
-        AttributeName: TTL
-        Enabled: true
-      BillingMode: PAY_PER_REQUEST
-
   ApplicationEndpoints:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -455,119 +408,100 @@ Outputs:
   ConnectionsTableName:
     Value: !Ref Connections
     Export:
-      Name: ConnectionsTableName
+      Name: !Sub "${StackName}-ConnectionsTableName"
 
   UserProfilesTableName:
     Value: !Ref UserProfiles
     Export:
-      Name: UserProfilesTableName
-
-  PuzzleProfilesTableName:
-    Value: !Ref PuzzleProfiles
-    Export:
-      Name: PuzzleProfilesTableName
-
+      Name: !Sub "${StackName}-UserProfilesTableName"
   UserRatingsTableName:
     Value: !Ref UserRatings
     Export:
-      Name: UserRatingsTableName
-
-  UserMatchesTableName:
-    Value: !Ref UserMatches
-    Export:
-      Name: UserMatchesTableName
-
-  ActiveMatchesTableName:
-    Value: !Ref ActiveMatches
-    Export:
-      Name: ActiveMatchesTableName
-
-  MatchStatesTableName:
-    Value: !Ref MatchStates
-    Export:
-      Name: MatchStatesTableName
-
-  MatchmakingTicketsTableName:
-    Value: !Ref MatchmakingTickets
-    Export:
-      Name: MatchmakingTicketsTableName
-
-  MessagesTableName:
-    Value: !Ref Messages
-    Export:
-      Name: MessagesTableName
-
-  MatchRecordsTableName:
-    Value: !Ref MatchRecords
-    Export:
-      Name: MatchRecordsTableName
+      Name: !Sub "${StackName}-UserRatingsTableName"
 
   MatchResultsTableName:
     Value: !Ref MatchResults
     Export:
-      Name: MatchResultsTableName
+      Name: !Sub "${StackName}-MatchResultsTableName"
 
-  SpectatorConversationsTableName:
-    Value: !Ref SpectatorConversations
+  UserMatchesTableName:
+    Value: !Ref UserMatches
     Export:
-      Name: SpectatorConversationsTableName
+      Name: !Sub "${StackName}-UserMatchesTableName"
 
-  EvaluationsTableName:
-    Value: !Ref Evaluations
+  ActiveMatchesTableName:
+    Value: !Ref ActiveMatches
     Export:
-      Name: EvaluationsTableName
+      Name: !Sub "${StackName}-ActiveMatchesTableName"
 
-  FriendshipsTableName:
-    Value: !Ref Friendships
+  MatchStatesTableName:
+    Value: !Ref MatchStates
     Export:
-      Name: FriendshipsTableName
+      Name: !Sub "${StackName}-MatchStatesTableName"
 
-  FriendRequestsTableName:
-    Value: !Ref FriendRequests
+  MatchmakingTicketsTableName:
+    Value: !Ref MatchmakingTickets
     Export:
-      Name: FriendRequestsTableName
-
-  ApplicationEndpointsTableName:
-    Value: !Ref ApplicationEndpoints
+      Name: !Sub "${StackName}-MatchmakingTicketsTableName"
+  MessagesTableName:
+    Value: !Ref Messages
     Export:
-      Name: ApplicationEndpointsTableName
-
-  PuzzlesBucketName:
-    Value: !Ref Puzzles
-    Export:
-      Name: PuzzlesBucketName
-
-  ImagesBucketName:
-    Value: !Ref Images
-    Export:
-      Name: ImagesBucketName
-
-  AvatarsBucketName:
-    Value: !Ref Avatars
-    Export:
-      Name: AvatarsBucketName
-
-  ActiveMatchesTableArn:
-    Value: !GetAtt ActiveMatches.Arn
-    Export:
-      Name: ActiveMatchesTableArn
-
-  MatchStatesTableArn:
-    Value: !GetAtt MatchStates.Arn
-    Export:
-      Name: MatchStatesTableArn
-
-  UserMatchesTableArn:
-    Value: !GetAtt UserMatches.Arn
-    Export:
-      Name: UserMatchesTableArn
-
-  SpectatorConversationsTableArn:
-    Value: !GetAtt SpectatorConversations.Arn
-    Export:
-      Name: SpectatorConversationsTableArn
+      Name: !Sub "${StackName}-MessagesTableName"
 
   MessagesTableArn:
     Value: !GetAtt Messages.Arn
     Export:
-      Name: MessagesTableArn
+      Name: !Sub "${StackName}-MessagesTableArn"
+
+  MatchRecordsTableName:
+    Value: !Ref MatchRecords
+    Export:
+      Name: !Sub "${StackName}-MatchRecordsTableName"
+  SpectatorConversationsTableName:
+    Value: !Ref SpectatorConversations
+    Export:
+      Name: !Sub "${StackName}-SpectatorConversationsTableName"
+
+  SpectatorConversationsTableArn:
+    Value: !GetAtt SpectatorConversations.Arn
+    Export:
+      Name: !Sub "${StackName}-SpectatorConversationsTableArn"
+  FriendshipsTableName:
+    Value: !Ref Friendships
+    Export:
+      Name: !Sub "${StackName}-FriendshipsTableName"
+
+  FriendRequestsTableName:
+    Value: !Ref FriendRequests
+    Export:
+      Name: !Sub "${StackName}-FriendRequestsTableName"
+
+  ImagesBucketName:
+    Value: !Ref Images
+    Export:
+      Name: !Sub "${StackName}-ImagesBucketName"
+
+  AvatarsBucketName:
+    Value: !Ref Avatars
+    Export:
+      Name: !Sub "${StackName}-AvatarsBucketName"
+
+  ActiveMatchesTableArn:
+    Value: !GetAtt ActiveMatches.Arn
+    Export:
+      Name: !Sub "${StackName}-ActiveMatchesTableArn"
+
+  MatchStatesTableArn:
+    Value: !GetAtt MatchStates.Arn
+    Export:
+      Name: !Sub "${StackName}-MatchStatesTableArn"
+
+  UserMatchesTableArn:
+    Value: !GetAtt UserMatches.Arn
+    Export:
+      Name: !Sub "${StackName}-UserMatchesTableArn"
+
+  ApplicationEndpointsTableName:
+    Value: !Ref ApplicationEndpoints
+    Export:
+      Name: !Sub "${StackName}-ApplicationEndpointsTableName"
