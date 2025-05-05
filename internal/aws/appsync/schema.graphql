@@ -11,6 +11,7 @@ type Message @aws_cognito_user_pools @aws_iam {
   Id: ID! @aws_cognito_user_pools @aws_iam
   ConversationId: ID! @aws_cognito_user_pools @aws_iam
   SenderId: ID! @aws_cognito_user_pools @aws_iam
+  Username: String! @aws_cognito_user_pools @aws_iam
   Content: String! @aws_cognito_user_pools @aws_iam
   CreatedAt: AWSDateTime! @aws_cognito_user_pools @aws_iam
 }
