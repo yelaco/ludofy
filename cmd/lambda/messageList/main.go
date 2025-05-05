@@ -56,7 +56,6 @@ func handler(
 		resp.NextPageToken = &dtos.NextMessagePageToken{
 			CreatedAt: lastEvalKey["CreatedAt"].(*types.AttributeValueMemberS).Value,
 		}
-		fmt.Println(lastEvalKey)
 	}
 
 	respJson, err := json.Marshal(resp)

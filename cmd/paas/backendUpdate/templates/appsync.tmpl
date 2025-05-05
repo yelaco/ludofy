@@ -103,11 +103,12 @@ Resources:
           "version": "2018-05-29",
           "operation": "PutItem",
           "key": {
-            "Id": { "S": "$context.arguments.input.id" }
+            "Id": { "S": "$util.autoId()" }
           },
           "attributeValues": {
             "ConversationId": { "S": "$context.arguments.input.conversationId" },
-            "SenderId": { "S": "$context.arguments.input.senderId" },
+            "SenderId": { "S": "$context.arguments.input.sender.id" },
+            "Username": { "S": "$context.arguments.input.sender.username" },
             "Content": { "S": "$context.arguments.input.content" },
             "CreatedAt": { "S": "$util.time.nowISO8601()" }
           }

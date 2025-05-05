@@ -15,6 +15,7 @@ type MessageResponse struct {
 	Id             string    `json:"id"`
 	ConversationId string    `json:"conversationId"`
 	SenderId       string    `json:"senderId"`
+	Username       string    `json:"username"`
 	Content        string    `json:"content"`
 	CreatedAt      time.Time `json:"createdAt"`
 }
@@ -38,6 +39,7 @@ func MessageResponseFromEntity(message entities.Message) MessageResponse {
 		Id:             message.Id,
 		ConversationId: message.ConversationId,
 		SenderId:       message.SenderId,
+		Username:       message.Username,
 		Content:        message.Content,
 		CreatedAt:      message.CreatedAt,
 	}

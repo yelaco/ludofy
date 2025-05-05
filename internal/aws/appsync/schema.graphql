@@ -24,10 +24,14 @@ input UpdateMatchStateInput {
   timestamp: AWSDateTime!
 }
 
-input SendMessageInput {
+input SenderInput {
   id: ID!
+  username: String!
+}
+
+input SendMessageInput {
   conversationId: ID!
-  senderId: ID!
+  sender: SenderInput!
   content: String!
 }
 
