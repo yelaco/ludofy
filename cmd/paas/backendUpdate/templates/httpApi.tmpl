@@ -146,6 +146,29 @@ Resources:
             Method: POST
             ApiId: !Ref HttpApi
 
+  MatchmakingCancelFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${StackName}-${DeploymentStage}-MatchmakingCancel"
+      CodeUri: ../cmd/lambda/matchmakingCancel/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue MatchmakingTicketsTableName
+      Environment:
+        Variables:
+          MATCHMAKING_TICKETS_TABLE_NAME: !ImportValue MatchmakingTicketsTableName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /matchmaking
+            Method: DELETE
+            ApiId: !Ref HttpApi
+
   MetricsGetFunction:
     Type: AWS::Serverless::Function
     Metadata:

@@ -70,7 +70,7 @@ func (client *Client) PutMatchmakingTickets(
 	return nil
 }
 
-func (client *Client) DeleteMatchmakingTickets(
+func (client *Client) DeleteMatchmakingTicket(
 	ctx context.Context,
 	userId string,
 ) error {

@@ -57,7 +57,7 @@ func handler(
 		err = storageClient.PutUserRating(ctx, entities.UserRating{
 			UserId:       userId,
 			Rating:       initialRating,
-			RD:           200,
+			RD:           100.0,
 			PartitionKey: "UserRatings",
 		})
 		if err != nil {
