@@ -2,6 +2,7 @@
 
 Ludofy is a **Platform-as-a-Service (PaaS)** designed to simplify the deployment and management of backend services for online games. Built entirely on **AWS serverless architecture**, Ludofy enables game developers to quickly deploy scalable, event-driven, and cost-efficient game backends—without managing infrastructure.
 
+https://ludofy.vercel.app/
 ## 🚀 Key Features
 
 - 🧩 **Modular Backend Services** – Built-in support for:
@@ -47,6 +48,11 @@ Ludofy consists of:
 - Cost-efficient (serverless pay-per-use model)
 
 ## 🧰 Getting Started
+
+You can try the production version directly:  
+👉 **[https://ludofy.vercel.app](https://ludofy.vercel.app)**
+
+Or clone and run locally:
 
 1. **Clone the repo**  
    ```bash
