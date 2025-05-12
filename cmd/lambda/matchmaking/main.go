@@ -147,7 +147,7 @@ func handler(
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-		}, fmt.Errorf("failed to find opponents: %w", err)
+		}, fmt.Errorf("failed to find matching players: %w", err)
 	}
 
 	// If no match found, queue the player by caching the matchmaking ticket
