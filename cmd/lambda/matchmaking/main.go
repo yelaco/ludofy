@@ -47,7 +47,7 @@ var (
 )
 
 func init() {
-	cfg, _ := config.LoadDefaultConfig(context.TODO())
+	cfg, _ := config.LoadDefaultConfig(context.Background())
 	storageClient = storage.NewClient(dynamodb.NewFromConfig(cfg))
 	computeClient = compute.NewClient(
 		ecs.NewFromConfig(cfg),

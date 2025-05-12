@@ -26,7 +26,7 @@ func (client *Client) ScanMatchmakingTickets(
 		},
 	}
 	if ticket.IsRanked {
-		filter += " AND Rating >= :min AND Rating <= :max AND MinRating <= :rating AND MaxRating >= :rating"
+		filter += " AND UserRating >= :min AND UserRating <= :max AND MinRating <= :rating AND MaxRating >= :rating"
 		expressionAttributeValues[":min"] = &types.AttributeValueMemberN{
 			Value: strconv.Itoa(int(ticket.MinRating)),
 		}
