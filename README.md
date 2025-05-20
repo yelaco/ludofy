@@ -1,6 +1,6 @@
 # 🎮 Ludofy – Serverless Game Backend Deployment Platform (PaaS)
 
-Ludofy is a **Platform-as-a-Service (PaaS)** designed to simplify the deployment and management of backend services for online games. Built entirely on **AWS serverless architecture**, Ludofy enables game developers to quickly deploy scalable, event-driven, and cost-efficient game backends—without managing infrastructure.
+Ludofy is a **Platform-as-a-Service (PaaS)** solution designed to simplify the deployment and management of backend services for online games. Built entirely on **AWS serverless architecture**, Ludofy enables game developers to quickly deploy scalable, event-driven, and cost-efficient game backends—without managing infrastructure.
 
 https://ludofy.vercel.app/
 ## 🚀 Key Features
