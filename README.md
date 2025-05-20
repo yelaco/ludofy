@@ -75,9 +75,9 @@ Or clone and run locally:
 
 ## 📚 Documentation
 
-- [Usage Guide](https://yelaco.github.io/ludofy/)
-- [SDK Reference](https://github.com/yelaco/ludofy-sdk)
-- [Customization Templates]()
+- [Usage Guide](https://yelaco/ludofy)
+- [SDK Reference](https://github.com/yelaco/ludofy)
+- [Customization Templates](https://ludofy.vercel.app/help/customization)
 
 ## 📊 Evaluation
 
