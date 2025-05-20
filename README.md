@@ -47,6 +47,19 @@ Ludofy consists of:
 - Dynamic scaling of game servers based on match requests
 - Cost-efficient (serverless pay-per-use model)
 
+## 🔧 Prerequisites
+
+Before setting up Ludofy locally or deploying your backend, make sure the following tools are installed:
+
+| Tool | Description | Install Guide |
+|------|-------------|----------------|
+| [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) | Required for deploying backend via AWS SAM | Run `aws configure` to set credentials |
+| [Docker](https://docs.docker.com/get-docker/) | Needed for building and uploading custom game servers | Used for ECS Fargate container deployment |
+| [Task](https://taskfile.dev/#/installation) | Task runner used to simplify local dev workflows | Runs scripts like `task web:run-dev` |
+| [Go](https://golang.org/dl/) | For SDK usage or backend service development | Required if customizing backend logic |
+| [Node.js & npm](https://nodejs.org/) | Needed for running the frontend dashboard | Vue.js-based UI setup |
+| [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) | AWS Serverless Application Model CLI | Used for deploying infrastructure via `task stack:deploy` |
+
 ## 🧰 Getting Started
 
 You can try the production version directly:  
@@ -60,14 +73,17 @@ Or clone and run locally:
    cd ludofy
    ```
 
-2. **Frontend setup**  
+2. **Frontend setup**
    ```bash
    task env:base
    task env:web
+
+   cd web
+   npm install
    task web:run-dev
    ```
 
-3. **Deploy backend (via AWS SAM)**  
+4. **Deploy backend (via AWS SAM)**  
    ```bash
    task env:base
    task stack:deploy
